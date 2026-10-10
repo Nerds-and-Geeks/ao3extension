@@ -265,6 +265,24 @@ async function testDomSuite() {
   assert.notStrictEqual(work301.style.display, 'none', 'Allowed author work must stay visible');
   assert.strictEqual(work302.style.display, 'none', 'Blocked author work must be hidden with display:none');
   console.log('  ✓ 3.9 Works authored by blocked authors are automatically hidden from DOM');
+
+  // Test 3.10: Blocked Authors Count & View Toggle in Injected Control Box
+  const blockedNoticeContainer = blockedDom.window.document.getElementById('ao3-blocked-notice-container');
+  const blockedNoticeText = blockedDom.window.document.getElementById('ao3-blocked-notice-text');
+  const btnToggleBlockedView = blockedDom.window.document.getElementById('ao3-btn-toggle-blocked-view');
+
+  assert(blockedNoticeContainer, '#ao3-blocked-notice-container must exist in top bar when blocked works are present');
+  assert.strictEqual(blockedNoticeContainer.style.display, 'flex', 'Notice container must be visible when blocked works exist');
+  assert(blockedNoticeText.innerHTML.includes('1 fic'), 'Notice banner must accurately report blocked work count');
+
+  // Toggle view to unhide blocked works for this view
+  btnToggleBlockedView.dispatchEvent(new blockedDom.window.MouseEvent('click', { bubbles: true }));
+  assert.notStrictEqual(work302.style.display, 'none', 'Clicking toggle button must unhide blocked work for current view');
+
+  // Toggle back to hide
+  btnToggleBlockedView.dispatchEvent(new blockedDom.window.MouseEvent('click', { bubbles: true }));
+  assert.strictEqual(work302.style.display, 'none', 'Clicking toggle button again must re-hide blocked work');
+  console.log('  ✓ 3.10 Blocked count notice banner and view toggle button correctly update DOM visibility');
 }
 
 module.exports = testDomSuite;

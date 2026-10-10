@@ -16,6 +16,7 @@
 
   var currentPenaltyConfig = null;
   var currentBlockedAuthors = [];
+  var showBlockedInCurrentView = false;
 
   // Initialize extension on page load
   function init() {
@@ -190,6 +191,7 @@
     var criteria = getActiveCriteria();
 
     var works = doc.querySelectorAll('ol.work.index > li.work, ul.work.index > li.work, ol.index.group > li.index.group, div.work');
+    var blockedCountOnPage = 0;
 
     works.forEach(function(workEl) {
       // Check Blocked Authors
@@ -201,14 +203,18 @@
       });
 
       if (isBlocked) {
-        workEl.style.display = 'none';
+        blockedCountOnPage++;
         workEl.classList.add('ao3-work-blocked');
-        return;
+        if (showBlockedInCurrentView) {
+          workEl.style.display = '';
+        } else {
+          workEl.style.display = 'none';
+        }
       } else {
         if (workEl.classList.contains('ao3-work-blocked')) {
-          workEl.style.display = '';
           workEl.classList.remove('ao3-work-blocked');
         }
+        workEl.style.display = '';
       }
 
       var workTags = extractWorkDetailsFromDom(workEl);
@@ -229,15 +235,49 @@
       if (heading && heading.nodeType === 1 && typeof heading.appendChild === 'function') {
         var badge = document.createElement('span');
         badge.className = 'ao3-precision-badge';
-        if (scoreResult.scorePercent === 100) badge.classList.add('exact');
-        else if (scoreResult.scorePercent >= 75) badge.classList.add('high');
-        else if (scoreResult.scorePercent >= 40) badge.classList.add('partial');
-        else badge.classList.add('diluted');
+        if (isBlocked && showBlockedInCurrentView) {
+          badge.classList.add('diluted');
+          badge.style.backgroundColor = '#d9534f';
+          badge.style.color = '#ffffff';
+          badge.textContent = '🚫 Blocked Author';
+        } else {
+          if (scoreResult.scorePercent === 100) badge.classList.add('exact');
+          else if (scoreResult.scorePercent >= 75) badge.classList.add('high');
+          else if (scoreResult.scorePercent >= 40) badge.classList.add('partial');
+          else badge.classList.add('diluted');
 
-        badge.textContent = scoreResult.label;
+          badge.textContent = scoreResult.label;
+        }
         heading.appendChild(badge);
       }
     });
+
+    updateBlockedAuthorsNotice(blockedCountOnPage);
+  }
+
+  function updateBlockedAuthorsNotice(count) {
+    var container = document.getElementById('ao3-blocked-notice-container');
+    var textEl = document.getElementById('ao3-blocked-notice-text');
+    var btnToggle = document.getElementById('ao3-btn-toggle-blocked-view');
+
+    if (!container) return;
+
+    if (count <= 0) {
+      container.style.display = 'none';
+      return;
+    }
+
+    container.style.display = 'flex';
+    var textStr = '🚫 <strong>' + count + ' ' + (count === 1 ? 'fic' : 'fics') + '</strong> from blocked authors ' + (showBlockedInCurrentView ? 'currently unhidden.' : 'hidden on this page.');
+    if (textEl) textEl.innerHTML = textStr;
+
+    if (btnToggle) {
+      if (showBlockedInCurrentView) {
+        btnToggle.textContent = '🙈 Hide Blocked for this View';
+      } else {
+        btnToggle.textContent = '👁️ Show Blocked for this View';
+      }
+    }
   }
 
   /**
@@ -544,6 +584,12 @@
 
     html += '</div>';
 
+    // Blocked Authors Notice Banner
+    html += '<div id="ao3-blocked-notice-container" style="display:none; margin-bottom:12px; padding:8px 12px; background:#fff3cd; border:1px solid #ffeeba; border-radius:6px; font-size:0.88em; color:#856404; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">';
+    html += '<span id="ao3-blocked-notice-text">🚫 <strong>0 Works</strong> from blocked authors</span>';
+    html += '<button id="ao3-btn-toggle-blocked-view" class="ao3-companion-btn ao3-companion-btn-secondary" style="width:auto; padding:4px 10px; margin-bottom:0; font-size:0.82em; min-height:28px;">👁️ Show Blocked for this View</button>';
+    html += '</div>';
+
     // Streamlined Precision Match Sorting Controls (Dropdown + Fetch & Sort Button)
     html += '<div style="display:flex; gap:8px; align-items:center; border-top:1px dashed #d0d0d0; padding-top:12px; flex-wrap:wrap;">';
     html += '<span style="font-weight:700; font-size:0.9em; color:#6200ee; margin-right:auto;">🎯 Precision Match Sorting:</span>';
@@ -572,6 +618,13 @@
     worksList.parentNode.insertBefore(topWidget, worksList);
 
     // Attach Event Listeners
+    var btnToggleBlocked = topWidget.querySelector('#ao3-btn-toggle-blocked-view');
+    if (btnToggleBlocked) {
+      btnToggleBlocked.addEventListener('click', function() {
+        showBlockedInCurrentView = !showBlockedInCurrentView;
+        applyPrecisionScoring();
+      });
+    }
     var btnSaveNew = topWidget.querySelector('#ao3-btn-save-new');
     if (btnSaveNew) {
       btnSaveNew.addEventListener('click', function() {
