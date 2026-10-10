@@ -200,6 +200,28 @@ async function testDomSuite() {
     singleDom.window.eval(contentCode);
   }, 'content.js must execute without throwing HierarchyRequestError on single work reader pages');
   console.log('  ✓ 3.7 Single work reader view handled safely without HierarchyRequestError');
+
+  // Test 3.8: User Pseud / Profile Page Protection (Do NOT inject controls on non-search pages)
+  const userPseudHtml = `
+    <!DOCTYPE html>
+    <html><body>
+      <div id="main">
+        <ol class="work index group">
+          <li class="work id_201" id="work_201"><h4 class="heading">User Story</h4></li>
+        </ol>
+      </div>
+    </body></html>
+  `;
+  const pseudDom = new JSDOM(userPseudHtml, { url: 'https://archiveofourown.org/users/YodelingProspector/pseuds/YodelingProspector' });
+  pseudDom.window.localStorage = { store: {}, getItem() { return null; }, setItem() {}, removeItem() {} };
+  pseudDom.window.eval(storageCode);
+  pseudDom.window.eval(scorerCode);
+  pseudDom.window.eval(contentCode);
+
+  await new Promise(r => setTimeout(r, 50));
+  const userTopWidget = pseudDom.window.document.getElementById('ao3-companion-top-bar');
+  assert.strictEqual(userTopWidget, null, 'Top bar widget must NOT be injected on user pseud/profile pages');
+  console.log('  ✓ 3.8 Companion controls correctly skipped on user profile and pseud pages');
 }
 
 module.exports = testDomSuite;

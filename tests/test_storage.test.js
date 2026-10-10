@@ -66,6 +66,18 @@ async function testStorageSuite() {
   const c3 = storage.parseAo3SearchUrl(filterTagUrl);
   assert(c3.fandoms.includes('Fandom A'), 'tag_id parameter must be parsed into fandoms list');
   console.log('  ✓ 1.6 parseAo3SearchUrl handles tag_id query parameter');
+
+  // Test 1.7: Page Type Filtering (Exclude user profile/pseud pages and single work reader views)
+  const userPseudUrl = 'https://archiveofourown.org/users/YodelingProspector/pseuds/YodelingProspector';
+  const userProfileUrl = 'https://archiveofourown.org/users/YodelingProspector';
+  const singleWorkUrl = 'https://archiveofourown.org/works/91487341';
+  const validSearchUrl = 'https://archiveofourown.org/works/search?work_search%5Bfandom_names%5D=Fandom+A';
+
+  assert.strictEqual(storage.isSearchOrFilterPage(userPseudUrl), false, 'User pseud pages must NOT be treated as search/filter pages');
+  assert.strictEqual(storage.isSearchOrFilterPage(userProfileUrl), false, 'User profile pages must NOT be treated as search/filter pages');
+  assert.strictEqual(storage.isSearchOrFilterPage(singleWorkUrl), false, 'Single work reader pages must NOT be treated as search/filter pages');
+  assert.strictEqual(storage.isSearchOrFilterPage(validSearchUrl), true, 'Valid search result pages must be treated as search/filter pages');
+  console.log('  ✓ 1.7 isSearchOrFilterPage correctly excludes non-search pages (user profiles, pseuds, single works)');
 }
 
 module.exports = testStorageSuite;

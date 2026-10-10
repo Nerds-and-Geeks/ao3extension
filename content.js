@@ -18,6 +18,11 @@
 
   // Initialize extension on page load
   function init() {
+    var checkFn = typeof isSearchOrFilterPage === 'function' ? isSearchOrFilterPage : (typeof window.isSearchOrFilterPage === 'function' ? window.isSearchOrFilterPage : function() { return true; });
+    if (!checkFn(window.location.href)) {
+      return;
+    }
+
     loadPresetsState().then(function() {
       injectTopBarWidget();
       applyPrecisionScoring();
@@ -26,6 +31,7 @@
     if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.onChanged) {
       chrome.storage.onChanged.addListener(function(changes, namespace) {
         if (namespace === 'local' && (changes.ao3_penalty_config || changes.ao3_active_preset_id || changes.ao3_presets_v2)) {
+          if (!checkFn(window.location.href)) return;
           loadPresetsState().then(function() {
             injectTopBarWidget();
             applyPrecisionScoring();
@@ -157,6 +163,10 @@
    * Calculates & displays precision badges for all works on the page
    */
   function applyPrecisionScoring(contextDoc) {
+    if (!contextDoc) {
+      var checkFn = typeof isSearchOrFilterPage === 'function' ? isSearchOrFilterPage : (typeof window.isSearchOrFilterPage === 'function' ? window.isSearchOrFilterPage : function() { return true; });
+      if (!checkFn(window.location.href)) return;
+    }
     var doc = contextDoc || document;
     var criteria = getActiveCriteria();
 
@@ -436,6 +446,9 @@
   function injectTopBarWidget() {
     var existingBar = document.getElementById('ao3-companion-top-bar');
     if (existingBar) existingBar.remove();
+
+    var checkFn = typeof isSearchOrFilterPage === 'function' ? isSearchOrFilterPage : (typeof window.isSearchOrFilterPage === 'function' ? window.isSearchOrFilterPage : function() { return true; });
+    if (!checkFn(window.location.href)) return;
 
     var worksList = document.querySelector('ol.work.index, ul.work.index, ol.index.group');
     if (!worksList) return;
