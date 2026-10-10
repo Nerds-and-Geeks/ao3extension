@@ -157,26 +157,23 @@
   }
 
   /**
-   * Multi-Page Prefetching & Sorting:
-   * Fetches next N pages of AO3 search results, scores all works across pages,
-   * and displays the top-ranked matches straight on screen.
+   * Multi-Page Prefetching & Sorting (Up to 30 Pages / 600 Works):
+   * Batches fetching of up to 30 pages of AO3 search results, scores all works,
+   * and displays top-ranked matches straight on screen.
    */
   function prefetchAndSortMultiPages(maxPagesToFetch) {
-    maxPagesToFetch = maxPagesToFetch || 5;
+    maxPagesToFetch = maxPagesToFetch || 30;
 
     var container = document.querySelector('ol.work.index, ul.work.index, ol.index.group');
     if (!container) return;
 
-    updateSortButtonsText('⏳ Prefetching pages 1 to ' + maxPagesToFetch + '...', '#ed6c02');
-
-    // Build page URLs to prefetch
-    var urlsToFetch = [];
     var baseUrlStr = window.location.href;
+    var urlsToFetch = [];
 
     for (var p = 2; p <= maxPagesToFetch; p++) {
       var pUrl = new URL(baseUrlStr);
       pUrl.searchParams.set('page', p.toString());
-      urlsToFetch.push(pUrl.toString());
+      urlsToFetch.push({ pageNum: p, url: pUrl.toString() });
     }
 
     var allWorksMap = new Map();
@@ -189,35 +186,50 @@
       allWorksMap.set(key, el);
     });
 
-    // Fetch subsequent pages in parallel
-    var fetchPromises = urlsToFetch.map(function(url) {
-      return fetch(url, { headers: { 'Accept': 'text/html' } })
-        .then(function(res) {
-          if (!res.ok) return '';
-          return res.text();
-        })
-        .then(function(htmlText) {
-          if (!htmlText) return;
-          var parser = new DOMParser();
-          var doc = parser.parseFromString(htmlText, 'text/html');
-          applyPrecisionScoring(doc);
-          var fetchedWorks = doc.querySelectorAll('ol.work.index > li.work, ul.work.index > li.work, ol.index.group > li.index.group, div.work');
+    var batchSize = 5;
 
-          fetchedWorks.forEach(function(wEl, idx) {
-            var key = wEl.id || ('work_fetched_' + url + '_' + idx);
-            if (!allWorksMap.has(key)) {
-              // Import element into active document context
-              var importedEl = document.importNode(wEl, true);
-              allWorksMap.set(key, importedEl);
-            }
+    function processBatch(batchIndex) {
+      var batch = urlsToFetch.slice(batchIndex * batchSize, (batchIndex + 1) * batchSize);
+      if (batch.length === 0) {
+        finishAndRender();
+        return;
+      }
+
+      var lastPageInBatch = batch[batch.length - 1].pageNum;
+      updateSortButtonsText('⏳ Prefetching page ' + lastPageInBatch + ' of ' + maxPagesToFetch + '...', '#ed6c02');
+
+      var batchPromises = batch.map(function(item) {
+        return fetch(item.url, { headers: { 'Accept': 'text/html' } })
+          .then(function(res) {
+            if (!res.ok) return '';
+            return res.text();
+          })
+          .then(function(htmlText) {
+            if (!htmlText) return;
+            var parser = new DOMParser();
+            var doc = parser.parseFromString(htmlText, 'text/html');
+            applyPrecisionScoring(doc);
+            var fetchedWorks = doc.querySelectorAll('ol.work.index > li.work, ul.work.index > li.work, ol.index.group > li.index.group, div.work');
+
+            fetchedWorks.forEach(function(wEl, idx) {
+              var key = wEl.id || ('work_fetched_' + item.url + '_' + idx);
+              if (!allWorksMap.has(key)) {
+                var importedEl = document.importNode(wEl, true);
+                allWorksMap.set(key, importedEl);
+              }
+            });
+          })
+          .catch(function(err) {
+            console.warn('Failed to prefetch page:', item.url, err);
           });
-        })
-        .catch(function(err) {
-          console.warn('Failed to prefetch page:', url, err);
-        });
-    });
+      });
 
-    Promise.all(fetchPromises).then(function() {
+      Promise.all(batchPromises).then(function() {
+        processBatch(batchIndex + 1);
+      });
+    }
+
+    function finishAndRender() {
       var combinedWorks = Array.from(allWorksMap.values());
 
       combinedWorks.sort(function(a, b) {
@@ -233,11 +245,13 @@
       });
 
       updateSortButtonsText('✓ Prefetched & Ranked ' + combinedWorks.length + ' Stories!', '#2e7d32');
-    });
+    }
+
+    processBatch(0);
   }
 
   function updateSortButtonsText(text, bg) {
-    var sortBtns = document.querySelectorAll('#ao3-btn-sort-precision, #ao3-btn-top-sort, #ao3-btn-multipage-sort');
+    var sortBtns = document.querySelectorAll('#ao3-btn-sort-precision, #ao3-btn-top-sort, #ao3-btn-multipage-sort, #ao3-btn-multipage-30');
     sortBtns.forEach(function(btn) {
       var origText = btn.dataset.origText || btn.textContent;
       btn.dataset.origText = origText;
@@ -246,7 +260,7 @@
       setTimeout(function() {
         btn.textContent = origText;
         btn.style.backgroundColor = '';
-      }, 3500);
+      }, 4000);
     });
   }
 
@@ -268,8 +282,11 @@
       '<button id="ao3-btn-top-sort" class="ao3-companion-btn ao3-companion-btn-accent" style="width: auto; min-height: 36px; padding: 6px 12px; margin-bottom: 0;">' +
       '🎯 Sort Page' +
       '</button>' +
-      '<button id="ao3-btn-multipage-sort" class="ao3-companion-btn ao3-companion-btn-success" style="width: auto; min-height: 36px; padding: 6px 12px; margin-bottom: 0;">' +
-      '🚀 Fetch & Sort Top 5 Pages' +
+      '<button id="ao3-btn-multipage-sort" class="ao3-companion-btn ao3-companion-btn-secondary" style="width: auto; min-height: 36px; padding: 6px 12px; margin-bottom: 0;">' +
+      '⚡ Fetch 5 Pages' +
+      '</button>' +
+      '<button id="ao3-btn-multipage-30" class="ao3-companion-btn ao3-companion-btn-success" style="width: auto; min-height: 36px; padding: 6px 12px; margin-bottom: 0;">' +
+      '🚀 Fetch Up to 30 Pages' +
       '</button>';
 
     worksList.parentNode.insertBefore(topBar, worksList);
@@ -277,8 +294,11 @@
     var topBtn = topBar.querySelector('#ao3-btn-top-sort');
     if (topBtn) topBtn.addEventListener('click', sortWorksByPrecision);
 
-    var multiBtn = topBar.querySelector('#ao3-btn-multipage-sort');
-    if (multiBtn) multiBtn.addEventListener('click', function() { prefetchAndSortMultiPages(5); });
+    var multiBtn5 = topBar.querySelector('#ao3-btn-multipage-sort');
+    if (multiBtn5) multiBtn5.addEventListener('click', function() { prefetchAndSortMultiPages(5); });
+
+    var multiBtn30 = topBar.querySelector('#ao3-btn-multipage-30');
+    if (multiBtn30) multiBtn30.addEventListener('click', function() { prefetchAndSortMultiPages(30); });
   }
 
   /**
@@ -335,7 +355,7 @@
     html += '<div class="ao3-companion-field" style="margin-top: 14px; border-top: 1px dashed #d0d0d0; padding-top: 12px;">';
     html += '<label style="color: #6200ee; font-weight: 700;">🎯 Sorting Options:</label>';
     html += '<button id="ao3-btn-sort-precision" class="ao3-companion-btn ao3-companion-btn-accent">🎯 Sort Page by Match %</button>';
-    html += '<button id="ao3-btn-sidebar-multipage" class="ao3-companion-btn ao3-companion-btn-success">🚀 Fetch & Sort Top 5 Pages</button>';
+    html += '<button id="ao3-btn-sidebar-multipage" class="ao3-companion-btn ao3-companion-btn-success">🚀 Fetch & Sort Up to 30 Pages</button>';
     html += '</div>';
 
     widget.innerHTML = html;
@@ -429,7 +449,7 @@
     if (btnSort) btnSort.addEventListener('click', sortWorksByPrecision);
 
     var btnMultiSide = widget.querySelector('#ao3-btn-sidebar-multipage');
-    if (btnMultiSide) btnMultiSide.addEventListener('click', function() { prefetchAndSortMultiPages(5); });
+    if (btnMultiSide) btnMultiSide.addEventListener('click', function() { prefetchAndSortMultiPages(30); });
   }
 
   function escapeHtml(str) {
