@@ -78,6 +78,22 @@ async function testStorageSuite() {
   assert.strictEqual(storage.isSearchOrFilterPage(singleWorkUrl), false, 'Single work reader pages must NOT be treated as search/filter pages');
   assert.strictEqual(storage.isSearchOrFilterPage(validSearchUrl), true, 'Valid search result pages must be treated as search/filter pages');
   console.log('  ✓ 1.7 isSearchOrFilterPage correctly excludes non-search pages (user profiles, pseuds, single works)');
+
+  // Test 1.8: Blocked Authors Storage Management
+  await storage.addBlockedAuthor('AuthorOne');
+  await storage.addBlockedAuthor('authorone'); // case-insensitive duplicate check
+  await storage.addBlockedAuthor('AuthorTwo');
+  
+  let blockedList = await storage.loadBlockedAuthors();
+  assert.strictEqual(blockedList.length, 2, 'Blocked authors list must contain 2 unique authors');
+  assert(blockedList.includes('AuthorOne'), 'AuthorOne must be in blocked authors list');
+  assert(blockedList.includes('AuthorTwo'), 'AuthorTwo must be in blocked authors list');
+
+  await storage.removeBlockedAuthor('authorone');
+  blockedList = await storage.loadBlockedAuthors();
+  assert.strictEqual(blockedList.length, 1, 'Removing author must leave 1 author');
+  assert.strictEqual(blockedList[0], 'AuthorTwo');
+  console.log('  ✓ 1.8 Blocked authors storage functions (add, deduplicate, load, remove) work accurately');
 }
 
 module.exports = testStorageSuite;

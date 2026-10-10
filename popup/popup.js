@@ -200,6 +200,73 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 
+  // Blocked Authors UI Logic
+  var inputBlockedAuthorEl = document.getElementById('new-blocked-author-name');
+  var btnAddBlockedAuthorEl = document.getElementById('btn-add-blocked-author');
+  var blockedAuthorListEl = document.getElementById('blocked-author-list');
+
+  function renderBlockedAuthors() {
+    if (typeof loadBlockedAuthors !== 'function') return;
+
+    loadBlockedAuthors().then(function(authors) {
+      if (!blockedAuthorListEl) return;
+      blockedAuthorListEl.innerHTML = '';
+
+      if (!authors || authors.length === 0) {
+        blockedAuthorListEl.innerHTML = '<div class="empty-state">No blocked authors yet.</div>';
+        return;
+      }
+
+      authors.forEach(function(authorName) {
+        var item = document.createElement('div');
+        item.className = 'preset-item';
+        item.style.display = 'flex';
+        item.style.justifyContent = 'space-between';
+        item.style.alignItems = 'center';
+
+        var nameSpan = document.createElement('span');
+        nameSpan.style.fontWeight = '600';
+        nameSpan.style.fontSize = '0.9em';
+        nameSpan.style.wordBreak = 'break-word';
+        nameSpan.textContent = authorName;
+
+        var btnRemove = document.createElement('button');
+        btnRemove.className = 'btn btn-danger';
+        btnRemove.style.minHeight = '30px';
+        btnRemove.style.padding = '4px 10px';
+        btnRemove.style.fontSize = '0.78em';
+        btnRemove.textContent = '🗑️ Remove';
+        btnRemove.addEventListener('click', function() {
+          if (typeof removeBlockedAuthor === 'function') {
+            removeBlockedAuthor(authorName).then(function() {
+              renderBlockedAuthors();
+            });
+          }
+        });
+
+        item.appendChild(nameSpan);
+        item.appendChild(btnRemove);
+        blockedAuthorListEl.appendChild(item);
+      });
+    });
+  }
+
+  if (btnAddBlockedAuthorEl) {
+    btnAddBlockedAuthorEl.addEventListener('click', function() {
+      var name = inputBlockedAuthorEl ? inputBlockedAuthorEl.value.trim() : '';
+      if (!name) return;
+
+      if (typeof addBlockedAuthor === 'function') {
+        addBlockedAuthor(name).then(function() {
+          if (inputBlockedAuthorEl) inputBlockedAuthorEl.value = '';
+          renderBlockedAuthors();
+        });
+      }
+    });
+  }
+
   renderPresets();
+  renderBlockedAuthors();
   initConfigPanel();
 });
+

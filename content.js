@@ -15,6 +15,7 @@
   var sortedPageSize = 20;
 
   var currentPenaltyConfig = null;
+  var currentBlockedAuthors = [];
 
   // Initialize extension on page load
   function init() {
@@ -30,7 +31,7 @@
 
     if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.onChanged) {
       chrome.storage.onChanged.addListener(function(changes, namespace) {
-        if (namespace === 'local' && (changes.ao3_penalty_config || changes.ao3_active_preset_id || changes.ao3_presets_v2)) {
+        if (namespace === 'local' && (changes.ao3_penalty_config || changes.ao3_active_preset_id || changes.ao3_presets_v2 || changes.ao3_blocked_authors)) {
           if (!checkFn(window.location.href)) return;
           loadPresetsState().then(function() {
             injectTopBarWidget();
@@ -42,17 +43,35 @@
   }
 
   function loadPresetsState() {
-    var pPresets = typeof loadPresets === 'function' ? loadPresets() : Promise.resolve({ presets: [], activePresetId: null });
-    var pConfig = typeof loadPenaltyConfig === 'function' ? loadPenaltyConfig() : Promise.resolve(null);
+    var fnPresets = typeof window !== 'undefined' && typeof window.loadPresets === 'function' ? window.loadPresets : (typeof loadPresets === 'function' ? loadPresets : null);
+    var fnConfig = typeof window !== 'undefined' && typeof window.loadPenaltyConfig === 'function' ? window.loadPenaltyConfig : (typeof loadPenaltyConfig === 'function' ? loadPenaltyConfig : null);
+    var fnBlocked = typeof window !== 'undefined' && typeof window.loadBlockedAuthors === 'function' ? window.loadBlockedAuthors : (typeof loadBlockedAuthors === 'function' ? loadBlockedAuthors : null);
 
-    return Promise.all([pPresets, pConfig]).then(function(results) {
+    var pPresets = fnPresets ? fnPresets() : Promise.resolve({ presets: [], activePresetId: null });
+    var pConfig = fnConfig ? fnConfig() : Promise.resolve(null);
+    var pBlocked = fnBlocked ? fnBlocked() : Promise.resolve([]);
+
+    return Promise.all([pPresets, pConfig, pBlocked]).then(function(results) {
       var state = results[0] || {};
       currentPenaltyConfig = results[1] || null;
+      currentBlockedAuthors = results[2] || [];
 
       currentPresets = state.presets || [];
       activePresetId = state.activePresetId || null;
       activePresetObj = currentPresets.find(function(p) { return p.id === activePresetId; }) || null;
     });
+  }
+
+  function extractWorkAuthorsFromDom(workEl) {
+    var authors = [];
+    var links = workEl.querySelectorAll('h4.heading a, .header a, .byline a, a[rel="author"]');
+    links.forEach(function(a) {
+      var href = a.getAttribute('href') || a.href || '';
+      if (href.indexOf('/users/') >= 0 && a.textContent) {
+        authors.push(a.textContent.trim());
+      }
+    });
+    return Array.from(new Set(authors));
   }
 
   /**
@@ -173,6 +192,25 @@
     var works = doc.querySelectorAll('ol.work.index > li.work, ul.work.index > li.work, ol.index.group > li.index.group, div.work');
 
     works.forEach(function(workEl) {
+      // Check Blocked Authors
+      var authors = extractWorkAuthorsFromDom(workEl);
+      var isBlocked = authors.some(function(author) {
+        return currentBlockedAuthors.some(function(b) {
+          return b.toLowerCase() === author.toLowerCase();
+        });
+      });
+
+      if (isBlocked) {
+        workEl.style.display = 'none';
+        workEl.classList.add('ao3-work-blocked');
+        return;
+      } else {
+        if (workEl.classList.contains('ao3-work-blocked')) {
+          workEl.style.display = '';
+          workEl.classList.remove('ao3-work-blocked');
+        }
+      }
+
       var workTags = extractWorkDetailsFromDom(workEl);
       var scoreResult = { scorePercent: 100, label: '100%' };
 

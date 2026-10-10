@@ -30,6 +30,19 @@
     </div>
 
     <div class="card">
+      <h3>🚫 Blocked Authors</h3>
+      <div class="input-group">
+        <div style="display:flex; gap:6px;">
+          <input type="text" id="new-blocked-author-name" placeholder="Author name (e.g. AuthorName)" style="margin-bottom:0;" />
+          <button id="btn-add-blocked-author" class="btn btn-primary" style="width:auto; white-space:nowrap;">+ Add</button>
+        </div>
+      </div>
+      <div id="blocked-author-list" class="preset-list" style="margin-top:10px; max-height:160px;">
+        <div class="empty-state">No blocked authors yet.</div>
+      </div>
+    </div>
+
+    <div class="card">
       <h3>⚙️ Match Penalty Config</h3>
       
       <div class="config-field">

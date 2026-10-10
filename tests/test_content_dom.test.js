@@ -222,6 +222,49 @@ async function testDomSuite() {
   const userTopWidget = pseudDom.window.document.getElementById('ao3-companion-top-bar');
   assert.strictEqual(userTopWidget, null, 'Top bar widget must NOT be injected on user pseud/profile pages');
   console.log('  ✓ 3.8 Companion controls correctly skipped on user profile and pseud pages');
+
+  // Test 3.9: Blocked Authors DOM Filtering
+  const blockedHtml = `
+    <!DOCTYPE html>
+    <html><body>
+      <div id="main">
+        <ol class="work index group">
+          <li class="work id_301" id="work_301">
+            <div class="header module">
+              <h4 class="heading">
+                <a href="/works/301">Allowed Story</a>
+                by <a href="/users/AllowedAuthor">AllowedAuthor</a>
+              </h4>
+            </div>
+          </li>
+          <li class="work id_302" id="work_302">
+            <div class="header module">
+              <h4 class="heading">
+                <a href="/works/302">Blocked Story</a>
+                by <a href="/users/BadAuthor">BadAuthor</a>
+              </h4>
+            </div>
+          </li>
+        </ol>
+      </div>
+    </body></html>
+  `;
+  const blockedDom = new JSDOM(blockedHtml, {
+    url: 'https://archiveofourown.org/works/search?work_search%5Bfandom_names%5D=Fandom+A',
+    runScripts: 'dangerously'
+  });
+  blockedDom.window.localStorage.setItem('ao3_blocked_authors', JSON.stringify(['BadAuthor']));
+  blockedDom.window.eval(storageCode);
+  blockedDom.window.eval(scorerCode);
+  blockedDom.window.eval(contentCode);
+
+  await new Promise(r => setTimeout(r, 100));
+  const work301 = blockedDom.window.document.getElementById('work_301');
+  const work302 = blockedDom.window.document.getElementById('work_302');
+
+  assert.notStrictEqual(work301.style.display, 'none', 'Allowed author work must stay visible');
+  assert.strictEqual(work302.style.display, 'none', 'Blocked author work must be hidden with display:none');
+  console.log('  ✓ 3.9 Works authored by blocked authors are automatically hidden from DOM');
 }
 
 module.exports = testDomSuite;
