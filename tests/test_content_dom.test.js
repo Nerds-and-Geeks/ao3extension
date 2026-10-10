@@ -177,6 +177,29 @@ async function testDomSuite() {
   assert.strictEqual(outerBars.length, 0, 'No loose pagination bars must be injected outside the AO3 Companion top box');
 
   console.log(`  ✓ 3.6 Depth dropdown prefetching (5 pages) successfully fetched ${worksAfterMulti.length} stories with embedded top-box pagination`);
+
+  // Test 3.7: Single Work Reader View (No HierarchyRequestError when firstChild is a Text node)
+  const singleWorkHtml = `
+    <!DOCTYPE html>
+    <html><body>
+      <div id="main">
+        <div class="work id_91487341" id="work_91487341">
+          
+          <!-- Whitespace text node above child div -->
+          <div>
+            <h3>Single Work Reader Title</h3>
+          </div>
+        </div>
+      </div>
+    </body></html>
+  `;
+  const singleDom = new JSDOM(singleWorkHtml, { url: 'https://archiveofourown.org/works/91487341' });
+  assert.doesNotThrow(() => {
+    singleDom.window.eval(storageCode);
+    singleDom.window.eval(scorerCode);
+    singleDom.window.eval(contentCode);
+  }, 'content.js must execute without throwing HierarchyRequestError on single work reader pages');
+  console.log('  ✓ 3.7 Single work reader view handled safely without HierarchyRequestError');
 }
 
 module.exports = testDomSuite;

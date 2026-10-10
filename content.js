@@ -176,9 +176,9 @@
       var oldBadge = workEl.querySelector('.ao3-precision-badge');
       if (oldBadge) oldBadge.remove();
 
-      // Create new badge
-      var heading = workEl.querySelector('h4.heading') || workEl.querySelector('header') || workEl.firstChild;
-      if (heading) {
+      // Create new badge - ensure heading is a valid Element node (nodeType 1)
+      var heading = workEl.querySelector('h4.heading, h3.heading, h2.heading, header') || workEl.querySelector('.header') || workEl.firstElementChild;
+      if (heading && heading.nodeType === 1 && typeof heading.appendChild === 'function') {
         var badge = document.createElement('span');
         badge.className = 'ao3-precision-badge';
         if (scoreResult.scorePercent === 100) badge.classList.add('exact');
@@ -595,11 +595,14 @@
     return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
   }
 
-  // Run initial setup
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
+  // Run initial setup safely
+  var d = typeof document !== 'undefined' ? document : (typeof window !== 'undefined' ? window.document : null);
+  if (d) {
+    if (d.readyState === 'loading') {
+      d.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
   }
 
 })();
