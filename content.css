@@ -176,3 +176,21 @@
   background-color: #757575;
   color: #ffffff;
 }
+
+/* Custom Extension Pagination Styles */
+.ao3-pag-btn {
+  background: #ffffff;
+  border: 1px solid #cccccc;
+  border-radius: 4px;
+  padding: 5px 11px;
+  font-size: 0.9em;
+  color: #900000;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.ao3-pag-btn:hover {
+  background: #fff0f0;
+  border-color: #900000;
+}

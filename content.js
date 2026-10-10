@@ -9,6 +9,11 @@
   var activePresetId = null;
   var activePresetObj = null;
 
+  // Sorted Pagination State
+  var sortedDataSet = [];
+  var currentSortedPage = 1;
+  var sortedPageSize = 20;
+
   // Initialize extension on page load
   function init() {
     loadPresetsState().then(function() {
@@ -130,7 +135,112 @@
   }
 
   /**
-   * Sorts works on page by precision score descending
+   * Renders a specific page from the sorted dataset
+   */
+  function renderSortedPage(pageNumber) {
+    if (sortedDataSet.length === 0) return;
+
+    var container = document.querySelector('ol.work.index, ul.work.index, ol.index.group');
+    if (!container) return;
+
+    var totalPages = Math.ceil(sortedDataSet.length / sortedPageSize);
+    pageNumber = Math.max(1, Math.min(pageNumber, totalPages));
+    currentSortedPage = pageNumber;
+
+    var startIndex = (pageNumber - 1) * sortedPageSize;
+    var endIndex = startIndex + sortedPageSize;
+    var pageWorks = sortedDataSet.slice(startIndex, endIndex);
+
+    // Render works for target page
+    container.innerHTML = '';
+    pageWorks.forEach(function(workEl) {
+      container.appendChild(workEl);
+    });
+
+    // Hide native AO3 server pagination
+    var nativePagination = document.querySelectorAll('ol.pagination, ul.pagination, div.pagination');
+    nativePagination.forEach(function(el) {
+      el.style.display = 'none';
+    });
+
+    // Inject custom extension pagination controls
+    renderCustomPaginationBars(totalPages, pageNumber);
+  }
+
+  /**
+   * Injects Custom Extension Pagination bars above and below sorted works
+   */
+  function renderCustomPaginationBars(totalPages, activePage) {
+    var oldBars = document.querySelectorAll('.ao3-companion-custom-pagination');
+    oldBars.forEach(function(el) { el.remove(); });
+
+    if (totalPages <= 1) return;
+
+    var container = document.querySelector('ol.work.index, ul.work.index, ol.index.group');
+    if (!container) return;
+
+    function buildNavElement() {
+      var nav = document.createElement('div');
+      nav.className = 'ao3-companion-custom-pagination';
+      nav.style.cssText = 'display: flex; align-items: center; justify-content: center; gap: 6px; margin: 16px 0; font-family: Lucida Grande, sans-serif; font-size: 0.9em; flex-wrap: wrap; background: #fafafa; border: 1px solid #e0e0e0; border-radius: 6px; padding: 8px 12px;';
+
+      var html = '<span style="font-weight: 700; margin-right: 8px; color: #900000;">Sorted Match Pages (' + sortedDataSet.length + ' Stories):</span>';
+
+      // Previous Button
+      if (activePage > 1) {
+        html += '<button class="ao3-pag-btn" data-page="' + (activePage - 1) + '">« Prev</button>';
+      }
+
+      // Page numbers
+      var maxPagesToShow = 10;
+      var startPage = Math.max(1, activePage - 4);
+      var endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
+
+      for (var p = startPage; p <= endPage; p++) {
+        if (p === activePage) {
+          html += '<span class="ao3-pag-current" style="padding: 5px 11px; background: #900000; color: #ffffff; font-weight: bold; border-radius: 4px;">' + p + '</span>';
+        } else {
+          html += '<button class="ao3-pag-btn" data-page="' + p + '">' + p + '</button>';
+        }
+      }
+
+      // Next Button
+      if (activePage < totalPages) {
+        html += '<button class="ao3-pag-btn" data-page="' + (activePage + 1) + '">Next »</button>';
+      }
+
+      nav.innerHTML = html;
+
+      // Click event listener for pagination buttons
+      nav.querySelectorAll('.ao3-pag-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          var targetPage = parseInt(btn.dataset.page, 10);
+          renderSortedPage(targetPage);
+          var worksList = document.querySelector('ol.work.index, ul.work.index, ol.index.group');
+          if (worksList) {
+            worksList.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        });
+      });
+
+      return nav;
+    }
+
+    // Top Pagination
+    var topNav = buildNavElement();
+    container.parentNode.insertBefore(topNav, container);
+
+    // Bottom Pagination
+    var bottomNav = buildNavElement();
+    if (container.nextSibling) {
+      container.parentNode.insertBefore(bottomNav, container.nextSibling);
+    } else {
+      container.parentNode.appendChild(bottomNav);
+    }
+  }
+
+  /**
+   * Sorts current page works by precision score descending
    */
   function sortWorksByPrecision() {
     applyPrecisionScoring();
@@ -147,19 +257,16 @@
       return scoreB - scoreA;
     });
 
-    // Re-append sorted elements into DOM
-    worksArray.forEach(function(workEl) {
-      container.appendChild(workEl);
-    });
+    sortedDataSet = worksArray;
+    renderSortedPage(1);
 
-    // Provide visual button feedback
     updateSortButtonsText('✓ Sorted ' + worksArray.length + ' Stories on Page!', '#2e7d32');
   }
 
   /**
    * Multi-Page Prefetching & Sorting (Up to 30 Pages / 600 Works):
    * Batches fetching of up to 30 pages of AO3 search results, scores all works,
-   * and displays top-ranked matches straight on screen.
+   * and renders custom sorted pagination controls.
    */
   function prefetchAndSortMultiPages(maxPagesToFetch) {
     maxPagesToFetch = maxPagesToFetch || 30;
@@ -238,11 +345,8 @@
         return scoreB - scoreA;
       });
 
-      // Clear container and append all pre-fetched, re-ranked works!
-      container.innerHTML = '';
-      combinedWorks.forEach(function(workEl) {
-        container.appendChild(workEl);
-      });
+      sortedDataSet = combinedWorks;
+      renderSortedPage(1);
 
       updateSortButtonsText('✓ Prefetched & Ranked ' + combinedWorks.length + ' Stories!', '#2e7d32');
     }
