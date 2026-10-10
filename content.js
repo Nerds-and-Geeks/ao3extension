@@ -215,86 +215,71 @@
       container.appendChild(workEl);
     });
 
-    // Hide native AO3 server pagination
-    var nativePagination = document.querySelectorAll('ol.pagination, ul.pagination, div.pagination');
-    nativePagination.forEach(function(el) {
-      el.style.display = 'none';
-    });
-
-    // Inject custom extension pagination controls
+    // Inject custom extension pagination controls INSIDE top bar box
     renderCustomPaginationBars(totalPages, pageNumber);
   }
 
   /**
-   * Injects Custom Extension Pagination bars above and below sorted works
+   * Injects Custom Extension Pagination controls INSIDE the AO3 Companion Top Box
    */
   function renderCustomPaginationBars(totalPages, activePage) {
-    var oldBars = document.querySelectorAll('.ao3-companion-custom-pagination');
-    oldBars.forEach(function(el) { el.remove(); });
+    // Remove any legacy outer pagination elements outside top bar
+    var oldOuterBars = document.querySelectorAll('.ao3-companion-custom-pagination');
+    oldOuterBars.forEach(function(el) { el.remove(); });
 
-    if (totalPages <= 1) return;
+    var box = document.getElementById('ao3-companion-pagination-box');
+    if (!box) return;
 
-    var container = document.querySelector('ol.work.index, ul.work.index, ol.index.group');
-    if (!container) return;
+    if (totalPages <= 1) {
+      box.style.display = 'none';
+      box.innerHTML = '';
+      return;
+    }
 
-    function buildNavElement() {
-      var nav = document.createElement('div');
-      nav.className = 'ao3-companion-custom-pagination';
-      nav.style.cssText = 'display: flex; align-items: center; justify-content: center; gap: 6px; margin: 16px 0; font-family: Lucida Grande, sans-serif; font-size: 0.9em; flex-wrap: wrap; background: #fafafa; border: 1px solid #e0e0e0; border-radius: 6px; padding: 8px 12px;';
+    box.style.display = 'flex';
+    box.style.alignItems = 'center';
+    box.style.justifyContent = 'center';
+    box.style.gap = '6px';
+    box.style.flexWrap = 'wrap';
 
-      var html = '<span style="font-weight: 700; margin-right: 8px; color: #900000;">Sorted Match Pages (' + sortedDataSet.length + ' Stories):</span>';
+    var html = '<span style="font-weight: 700; font-size: 0.88em; color: #900000; margin-right: 8px;">Sorted Match Pages (Page ' + activePage + ' of ' + totalPages + ' • ' + sortedDataSet.length + ' Stories):</span>';
 
-      // Previous Button
-      if (activePage > 1) {
-        html += '<button class="ao3-pag-btn" data-page="' + (activePage - 1) + '">« Prev</button>';
+    // Previous Button
+    if (activePage > 1) {
+      html += '<button class="ao3-pag-btn" data-page="' + (activePage - 1) + '">« Prev</button>';
+    }
+
+    // Page numbers
+    var maxPagesToShow = 10;
+    var startPage = Math.max(1, activePage - 4);
+    var endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
+
+    for (var p = startPage; p <= endPage; p++) {
+      if (p === activePage) {
+        html += '<span class="ao3-pag-current" style="padding: 5px 11px; background: #900000; color: #ffffff; font-weight: bold; border-radius: 4px;">' + p + '</span>';
+      } else {
+        html += '<button class="ao3-pag-btn" data-page="' + p + '">' + p + '</button>';
       }
+    }
 
-      // Page numbers
-      var maxPagesToShow = 10;
-      var startPage = Math.max(1, activePage - 4);
-      var endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
+    // Next Button
+    if (activePage < totalPages) {
+      html += '<button class="ao3-pag-btn" data-page="' + (activePage + 1) + '">Next »</button>';
+    }
 
-      for (var p = startPage; p <= endPage; p++) {
-        if (p === activePage) {
-          html += '<span class="ao3-pag-current" style="padding: 5px 11px; background: #900000; color: #ffffff; font-weight: bold; border-radius: 4px;">' + p + '</span>';
-        } else {
-          html += '<button class="ao3-pag-btn" data-page="' + p + '">' + p + '</button>';
+    box.innerHTML = html;
+
+    // Click event listener for pagination buttons
+    box.querySelectorAll('.ao3-pag-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var targetPage = parseInt(btn.dataset.page, 10);
+        renderSortedPage(targetPage);
+        var worksList = document.querySelector('ol.work.index, ul.work.index, ol.index.group');
+        if (worksList) {
+          worksList.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
-      }
-
-      // Next Button
-      if (activePage < totalPages) {
-        html += '<button class="ao3-pag-btn" data-page="' + (activePage + 1) + '">Next »</button>';
-      }
-
-      nav.innerHTML = html;
-
-      // Click event listener for pagination buttons
-      nav.querySelectorAll('.ao3-pag-btn').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-          var targetPage = parseInt(btn.dataset.page, 10);
-          renderSortedPage(targetPage);
-          var worksList = document.querySelector('ol.work.index, ul.work.index, ol.index.group');
-          if (worksList) {
-            worksList.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          }
-        });
       });
-
-      return nav;
-    }
-
-    // Top Pagination
-    var topNav = buildNavElement();
-    container.parentNode.insertBefore(topNav, container);
-
-    // Bottom Pagination
-    var bottomNav = buildNavElement();
-    if (container.nextSibling) {
-      container.parentNode.insertBefore(bottomNav, container.nextSibling);
-    } else {
-      container.parentNode.appendChild(bottomNav);
-    }
+    });
   }
 
   /**
@@ -324,7 +309,7 @@
   /**
    * Multi-Page Prefetching & Sorting:
    * Batches fetching of up to N pages of AO3 search results, scores all works,
-   * and renders custom sorted pagination controls.
+   * and renders custom sorted pagination controls inside top box.
    */
   function prefetchAndSortMultiPages(maxPagesToFetch) {
     var container = document.querySelector('ol.work.index, ul.work.index, ol.index.group');
@@ -507,6 +492,9 @@
     html += '</select>';
     html += '<button id="ao3-btn-fetch-sort" class="ao3-companion-btn ao3-companion-btn-accent" style="width:auto; margin-bottom:0; white-space:nowrap;">🚀 Fetch & Sort Matches</button>';
     html += '</div>';
+
+    // Embedded Sorted Pagination Box INSIDE AO3 Companion Box
+    html += '<div id="ao3-companion-pagination-box" style="display:none; margin-top:12px; border-top:1px dashed #d0d0d0; padding-top:12px;"></div>';
 
     topWidget.innerHTML = html;
     worksList.parentNode.insertBefore(topWidget, worksList);

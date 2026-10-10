@@ -158,14 +158,25 @@ async function testDomSuite() {
   assert(btnOverwrite, 'Overwrite button must be rendered when a preset is active');
   console.log('  ✓ 3.5 Overwrite button properly displayed for active preset');
 
-  // Test 3.6: Multi-Page Prefetch & Sort with Depth Dropdown
+  // Test 3.6: Multi-Page Prefetch & Sort with Depth Dropdown & Embedded Pagination
   depthSelect.value = "5";
   btnFetchSort.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
   await new Promise(r => setTimeout(r, 300));
 
   const worksAfterMulti = document.querySelectorAll('ol.work.index > li.work');
   assert(worksAfterMulti.length >= 3, 'Multi-page prefetching must append prefetched works into DOM');
-  console.log(`  ✓ 3.6 Depth dropdown prefetching (5 pages) successfully fetched and ranked ${worksAfterMulti.length} stories across pages`);
+
+  // Verify pagination is embedded INSIDE #ao3-companion-top-bar
+  const currentTopWidget = document.getElementById('ao3-companion-top-bar');
+  const paginationBox = document.getElementById('ao3-companion-pagination-box');
+  assert(paginationBox, '#ao3-companion-pagination-box must exist inside top bar widget');
+  assert(currentTopWidget.contains(paginationBox), 'Pagination box must be contained inside active top bar widget #ao3-companion-top-bar');
+
+  // Verify no outer legacy pagination bars exist outside top bar box
+  const outerBars = document.querySelectorAll('.ao3-companion-custom-pagination');
+  assert.strictEqual(outerBars.length, 0, 'No loose pagination bars must be injected outside the AO3 Companion top box');
+
+  console.log(`  ✓ 3.6 Depth dropdown prefetching (5 pages) successfully fetched ${worksAfterMulti.length} stories with embedded top-box pagination`);
 }
 
 module.exports = testDomSuite;
