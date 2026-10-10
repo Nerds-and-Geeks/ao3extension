@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>AO3 Companion</title>
+  <link rel="stylesheet" href="popup.css">
+  <script src="../lib/storage.js"></script>
+  <script src="../lib/precision-scorer.js"></script>
+</head>
+<body>
+  <div class="popup-container">
+    <header class="popup-header">
+      <h2>AO3 Companion</h2>
+      <p class="subtitle">Preset Manager & Tag Scorer</p>
+    </header>
+
+    <div class="card">
+      <h3>⭐ Save Current Search</h3>
+      <div class="input-group">
+        <input type="text" id="new-preset-name" placeholder="Preset name (e.g. Marvel Slowburn)" />
+        <button id="btn-save-current" class="btn btn-primary">Save Preset</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>📚 Saved Presets</h3>
+      <div id="preset-list" class="preset-list">
+        <div class="empty-state">Loading presets...</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

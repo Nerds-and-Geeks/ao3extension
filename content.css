@@ -1,0 +1,178 @@
+/* AO3 Companion - Extension Stylesheet */
+
+.ao3-companion-widget {
+  background: #ffffff;
+  border: 1px solid #dcdcdc;
+  border-radius: 8px;
+  padding: 14px;
+  margin-bottom: 16px;
+  font-family: Lucida Grande, Lucida Sans Unicode, Verdana, Helvetica, sans-serif;
+  color: #222222;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.ao3-companion-widget h3 {
+  margin: 0 0 12px 0;
+  font-size: 1.15em;
+  color: #900000;
+  border-bottom: 2px solid #900000;
+  padding-bottom: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ao3-companion-status {
+  background: #f0f7ff;
+  border: 1px solid #b6d4f5;
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  font-size: 0.92em;
+  line-height: 1.4;
+}
+
+.ao3-companion-status.active {
+  background: #eaf6ec;
+  border-color: #9bd6a7;
+  color: #1b5e20;
+}
+
+.ao3-companion-field {
+  margin-bottom: 12px;
+}
+
+.ao3-companion-field label {
+  display: block;
+  font-weight: 600;
+  font-size: 0.88em;
+  margin-bottom: 6px;
+  color: #444;
+}
+
+.ao3-companion-input {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 40px;
+  padding: 9px 12px;
+  border: 1px solid #cccccc;
+  border-radius: 6px;
+  font-size: 0.92em;
+  margin-bottom: 8px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.ao3-companion-input:focus {
+  border-color: #900000;
+}
+
+.ao3-companion-select {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 40px;
+  padding: 9px 12px;
+  border: 1px solid #cccccc;
+  border-radius: 6px;
+  font-size: 0.92em;
+  margin-bottom: 8px;
+  background: #ffffff;
+  outline: none;
+}
+
+.ao3-companion-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 44px;
+  padding: 10px 14px;
+  background: #900000;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.9em;
+  line-height: 1.35;
+  cursor: pointer;
+  text-align: center;
+  margin-bottom: 8px;
+  transition: background 0.2s, transform 0.1s, box-shadow 0.2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+  word-break: break-word;
+}
+
+.ao3-companion-btn:hover {
+  background: #700000;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+}
+
+.ao3-companion-btn:active {
+  transform: translateY(1px);
+}
+
+.ao3-companion-btn-secondary {
+  background: #4a5568;
+}
+
+.ao3-companion-btn-secondary:hover {
+  background: #2d3748;
+}
+
+.ao3-companion-btn-success {
+  background: #2e7d32;
+}
+
+.ao3-companion-btn-success:hover {
+  background: #1b5e20;
+}
+
+.ao3-companion-btn-danger {
+  background: #d32f2f;
+}
+
+.ao3-companion-btn-danger:hover {
+  background: #c62828;
+}
+
+.ao3-companion-btn-accent {
+  background: #6200ee;
+}
+
+.ao3-companion-btn-accent:hover {
+  background: #4b00c6;
+}
+
+/* Precision Badge on Work Cards */
+.ao3-precision-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  margin-left: 8px;
+  border-radius: 12px;
+  font-size: 0.82em;
+  font-weight: 700;
+  vertical-align: middle;
+  line-height: 1.2;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.ao3-precision-badge.exact {
+  background-color: #2e7d32;
+  color: #ffffff;
+}
+
+.ao3-precision-badge.high {
+  background-color: #0288d1;
+  color: #ffffff;
+}
+
+.ao3-precision-badge.partial {
+  background-color: #ed6c02;
+  color: #ffffff;
+}
+
+.ao3-precision-badge.diluted {
+  background-color: #757575;
+  color: #ffffff;
+}

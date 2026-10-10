@@ -1,0 +1,45 @@
+{
+  "manifest_version": 3,
+  "name": "AO3 Preset Manager & Precision Scorer",
+  "version": "2.0.0",
+  "description": "Save AO3 searches as presets, edit presets by saving on top, and rank fics by exact tag precision match.",
+  "permissions": [
+    "storage",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "https://archiveofourown.org/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://archiveofourown.org/*"
+      ],
+      "js": [
+        "lib/storage.js",
+        "lib/precision-scorer.js",
+        "content.js"
+      ],
+      "css": [
+        "content.css"
+      ],
+      "run_at": "document_end"
+    }
+  ],
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

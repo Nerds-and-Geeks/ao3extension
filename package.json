@@ -1,0 +1,12 @@
+{
+  "name": "ao3-companion-extension",
+  "version": "2.0.0",
+  "description": "AO3 Companion Chrome Extension - Preset Manager & Tag Scorer",
+  "main": "content.js",
+  "scripts": {
+    "test": "node tests/runner.js"
+  },
+  "devDependencies": {
+    "jsdom": "^26.0.0"
+  }
+}
