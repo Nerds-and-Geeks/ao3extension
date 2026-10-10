@@ -130,6 +130,23 @@ async function testScorerSuite() {
   assert.strictEqual(scoreSamePairAndUnrelated.categoryScores.relationships.precision, 0.98, 'Relationship precision must be 98% (1 unrelated friendship tag)');
   assert.strictEqual(scoreSamePairAndUnrelated.scorePercent, 99, 'Same pair friendship does not ding, 1 unrelated friendship tag dings 2% (relationship 98% -> overall 99%)');
   console.log('  ✓ 2.8 Same-character pair friendship tag (Clark Kent & Lois Lane) does NOT ding when Clark Kent/Lois Lane is requested');
+
+  // Test 2.9: Reversed Character Name Order Matching (Lois Lane/Clark Kent matches Clark Kent/Lois Lane)
+  const workWithReversedNames = {
+    fandoms: ['Superman (Movie 2025)'],
+    relationships: ['Lois Lane/Clark Kent'] // Reversed name order
+  };
+  const scoreReversed = Scorer.calculatePrecisionScore(workWithReversedNames, presetCriteria);
+  assert.strictEqual(scoreReversed.scorePercent, 100, 'Reversed character name order (Lois Lane/Clark Kent) must match 100%');
+  assert.strictEqual(scoreReversed.label, '🎯 100% Exact Match');
+
+  const workWithReversedFriendship = {
+    fandoms: ['Superman (Movie 2025)'],
+    relationships: ['Lois Lane & Clark Kent'] // Reversed friendship tag
+  };
+  const scoreReversedFriendship = Scorer.calculatePrecisionScore(workWithReversedFriendship, presetCriteria);
+  assert.strictEqual(scoreReversedFriendship.scorePercent, 100, 'Reversed friendship tag (Lois Lane & Clark Kent) must match 100%');
+  console.log('  ✓ 2.9 Reversed character name order (Lois Lane/Clark Kent and Lois Lane & Clark Kent) matches 100%');
 }
 
 module.exports = testScorerSuite;
