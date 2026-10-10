@@ -68,10 +68,24 @@ async function testScorerSuite() {
   assert.strictEqual(scoreAdditionalTags.scorePercent, 100, 'Additional tags and character tags must NOT ding the match score');
   console.log('  ✓ 2.4 Additional freeform tags and character tags do NOT affect the score (stays 100%)');
 
-  // Test 2.5: Empty Criteria Handling
+  // Test 2.5: User Custom Config Penalties
+  const customConfig = {
+    fandomPenaltyPct: 5,        // 5% per extra fandom
+    romancePenaltyPct: 10,      // 10% per extra romance
+    friendshipPenaltyPct: 2     // 2% per extra friendship
+  };
+
+  const customScore = Scorer.calculatePrecisionScore(workWithExtraRomanceAndFriendship, presetCriteria, customConfig);
+  // Custom penalty: 1 extra romance (10%) + 2 extra friendships (4%) = 14% -> Rel score = 86%
+  // Overall score: (100% + 86%) / 2 = 93%
+  assert.strictEqual(customScore.categoryScores.relationships.precision, 0.86);
+  assert.strictEqual(customScore.scorePercent, 93);
+  console.log(`  ✓ 2.5 User custom config penalties (5% fandom, 10% romance, 2% friendship) accurately applied (${customScore.scorePercent}%)`);
+
+  // Test 2.6: Empty Criteria Handling
   const scoreEmpty = Scorer.calculatePrecisionScore(exactWork, null);
   assert.strictEqual(scoreEmpty.scorePercent, 100);
-  console.log('  ✓ 2.5 Null preset criteria defaults cleanly to 100% base match for single-fandom work');
+  console.log('  ✓ 2.6 Null preset criteria defaults cleanly to 100% base match for single-fandom work');
 }
 
 module.exports = testScorerSuite;

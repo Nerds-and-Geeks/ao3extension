@@ -14,23 +14,39 @@
   var currentSortedPage = 1;
   var sortedPageSize = 20;
 
+  var currentPenaltyConfig = null;
+
   // Initialize extension on page load
   function init() {
     loadPresetsState().then(function() {
       injectTopBarWidget();
       applyPrecisionScoring();
     });
+
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.onChanged) {
+      chrome.storage.onChanged.addListener(function(changes, namespace) {
+        if (namespace === 'local' && (changes.ao3_penalty_config || changes.ao3_active_preset_id || changes.ao3_presets_v2)) {
+          loadPresetsState().then(function() {
+            injectTopBarWidget();
+            applyPrecisionScoring();
+          });
+        }
+      });
+    }
   }
 
   function loadPresetsState() {
-    if (typeof loadPresets === 'function') {
-      return loadPresets().then(function(state) {
-        currentPresets = state.presets || [];
-        activePresetId = state.activePresetId || null;
-        activePresetObj = currentPresets.find(function(p) { return p.id === activePresetId; }) || null;
-      });
-    }
-    return Promise.resolve();
+    var pPresets = typeof loadPresets === 'function' ? loadPresets() : Promise.resolve({ presets: [], activePresetId: null });
+    var pConfig = typeof loadPenaltyConfig === 'function' ? loadPenaltyConfig() : Promise.resolve(null);
+
+    return Promise.all([pPresets, pConfig]).then(function(results) {
+      var state = results[0] || {};
+      currentPenaltyConfig = results[1] || null;
+
+      currentPresets = state.presets || [];
+      activePresetId = state.activePresetId || null;
+      activePresetObj = currentPresets.find(function(p) { return p.id === activePresetId; }) || null;
+    });
   }
 
   /**
@@ -141,7 +157,7 @@
       var scoreResult = { scorePercent: 100, label: '100%' };
 
       if (typeof PrecisionScorer !== 'undefined' && PrecisionScorer.calculatePrecisionScore) {
-        scoreResult = PrecisionScorer.calculatePrecisionScore(workTags, criteria);
+        scoreResult = PrecisionScorer.calculatePrecisionScore(workTags, criteria, currentPenaltyConfig);
       }
 
       workEl.dataset.precisionScore = scoreResult.scorePercent;

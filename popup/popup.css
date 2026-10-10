@@ -114,7 +114,7 @@ input[type="text"]:focus {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  max-height: 280px;
+  max-height: 220px;
   overflow-y: auto;
 }
 
@@ -166,4 +166,36 @@ input[type="text"]:focus {
   font-size: 0.88em;
   line-height: 1.4;
   padding: 14px 0;
+}
+
+/* Match Penalty Config Styles */
+.config-field {
+  margin-bottom: 10px;
+}
+
+.config-field label {
+  display: block;
+  font-size: 0.82em;
+  font-weight: 600;
+  color: #444444;
+  margin-bottom: 4px;
+}
+
+.slider-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.slider-row input[type="range"] {
+  flex: 1;
+  accent-color: #900000;
+}
+
+.config-val-badge {
+  font-size: 0.82em;
+  font-weight: bold;
+  color: #900000;
+  min-width: 42px;
+  text-align: right;
 }

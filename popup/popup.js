@@ -7,6 +7,15 @@ document.addEventListener('DOMContentLoaded', function() {
   var inputNameEl = document.getElementById('new-preset-name');
   var btnSaveEl = document.getElementById('btn-save-current');
 
+  // Config Sliders & Badges
+  var sliderFandom = document.getElementById('cfg-fandom-slider');
+  var valFandom = document.getElementById('cfg-fandom-val');
+  var sliderRomance = document.getElementById('cfg-romance-slider');
+  var valRomance = document.getElementById('cfg-romance-val');
+  var sliderFriendship = document.getElementById('cfg-friendship-slider');
+  var valFriendship = document.getElementById('cfg-friendship-val');
+  var btnSaveConfig = document.getElementById('btn-save-config');
+
   function getActiveTabUrl() {
     return new Promise(function(resolve) {
       if (typeof chrome !== 'undefined' && chrome.tabs) {
@@ -116,6 +125,60 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
+  function initConfigPanel() {
+    if (typeof loadPenaltyConfig !== 'function') return;
+
+    loadPenaltyConfig().then(function(cfg) {
+      if (sliderFandom) {
+        sliderFandom.value = cfg.fandomPenaltyPct;
+        valFandom.textContent = cfg.fandomPenaltyPct + '%';
+        sliderFandom.addEventListener('input', function() {
+          valFandom.textContent = sliderFandom.value + '%';
+        });
+      }
+
+      if (sliderRomance) {
+        sliderRomance.value = cfg.romancePenaltyPct;
+        valRomance.textContent = cfg.romancePenaltyPct + '%';
+        sliderRomance.addEventListener('input', function() {
+          valRomance.textContent = sliderRomance.value + '%';
+        });
+      }
+
+      if (sliderFriendship) {
+        sliderFriendship.value = cfg.friendshipPenaltyPct;
+        valFriendship.textContent = cfg.friendshipPenaltyPct + '%';
+        sliderFriendship.addEventListener('input', function() {
+          valFriendship.textContent = sliderFriendship.value + '%';
+        });
+      }
+    });
+
+    if (btnSaveConfig) {
+      btnSaveConfig.addEventListener('click', function() {
+        var newConfig = {
+          fandomPenaltyPct: parseFloat(sliderFandom.value),
+          romancePenaltyPct: parseFloat(sliderRomance.value),
+          friendshipPenaltyPct: parseFloat(sliderFriendship.value)
+        };
+
+        if (typeof savePenaltyConfig === 'function') {
+          savePenaltyConfig(newConfig).then(function() {
+            var origText = btnSaveConfig.textContent;
+            btnSaveConfig.textContent = '✓ Config Saved!';
+            btnSaveConfig.style.backgroundColor = '#2e7d32';
+            btnSaveConfig.style.color = '#ffffff';
+            setTimeout(function() {
+              btnSaveConfig.textContent = origText;
+              btnSaveConfig.style.backgroundColor = '';
+              btnSaveConfig.style.color = '';
+            }, 2000);
+          });
+        }
+      });
+    }
+  }
+
   // Save current tab search as new preset
   btnSaveEl.addEventListener('click', function() {
     var name = inputNameEl.value.trim();
@@ -138,4 +201,5 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   renderPresets();
+  initConfigPanel();
 });
