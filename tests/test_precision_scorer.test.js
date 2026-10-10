@@ -105,6 +105,31 @@ async function testScorerSuite() {
   const tinyPenaltyScore = Scorer.calculatePrecisionScore(userReportedWork, presetCriteria, { friendshipPenaltyPct: 0.1 });
   assert.strictEqual(tinyPenaltyScore.scorePercent, 99, 'Non-perfect match with tiny penalty must cap at 99%');
   console.log(`  ✓ 2.7 Work with 2 extra friendship tags accurately dings 4% (98%) and score capping protects 100% badge`);
+
+  // Test 2.8: Same Character Pair Edge Case (Clark Kent & Lois Lane does NOT ding when Clark Kent/Lois Lane is requested)
+  const workWithSamePairFriendship = {
+    fandoms: ['Superman (Movie 2025)'],
+    relationships: [
+      'Clark Kent/Lois Lane',
+      'Clark Kent & Lois Lane' // Same character pair as requested Clark Kent/Lois Lane -> 0 penalty!
+    ]
+  };
+  const scoreSamePair = Scorer.calculatePrecisionScore(workWithSamePairFriendship, presetCriteria);
+  assert.strictEqual(scoreSamePair.scorePercent, 100, 'Clark Kent & Lois Lane must NOT ding score when Clark Kent/Lois Lane is requested');
+  assert.strictEqual(scoreSamePair.label, '🎯 100% Exact Match');
+
+  const workWithSamePairAndUnrelatedFriendship = {
+    fandoms: ['Superman (Movie 2025)'],
+    relationships: [
+      'Clark Kent/Lois Lane',
+      'Clark Kent & Lois Lane',  // Same pair -> 0% penalty
+      'Joey Mason & Rex Mason'   // Different pair -> 2% penalty
+    ]
+  };
+  const scoreSamePairAndUnrelated = Scorer.calculatePrecisionScore(workWithSamePairAndUnrelatedFriendship, presetCriteria);
+  assert.strictEqual(scoreSamePairAndUnrelated.categoryScores.relationships.precision, 0.98, 'Relationship precision must be 98% (1 unrelated friendship tag)');
+  assert.strictEqual(scoreSamePairAndUnrelated.scorePercent, 99, 'Same pair friendship does not ding, 1 unrelated friendship tag dings 2% (relationship 98% -> overall 99%)');
+  console.log('  ✓ 2.8 Same-character pair friendship tag (Clark Kent & Lois Lane) does NOT ding when Clark Kent/Lois Lane is requested');
 }
 
 module.exports = testScorerSuite;
