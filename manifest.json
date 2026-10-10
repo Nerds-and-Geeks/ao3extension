@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "AO3 Preset Manager & Precision Scorer",
+  "name": "AO3 Companion - Filter preset manager - Always find the fics that match your taste",
   "version": "2.0.0",
-  "description": "Save AO3 searches as presets, edit presets by saving on top, and rank fics by exact tag precision match.",
+  "description": "AO3 Companion - Filter preset manager - Always find the fics that match your taste",
   "permissions": [
     "storage",
     "activeTab"

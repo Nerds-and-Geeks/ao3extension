@@ -1,4 +1,4 @@
-# ⚡ AO3 Companion Chrome Extension
+# ⚡ AO3 Companion - Filter preset manager - Always find the fics that match your taste
 
 An intelligent Chrome Extension for **Archive of Our Own (AO3)** that lets you save search presets, overwrite active presets, rate fanfictions by exact tag match precision, and prefetch & rank multi-page search results cleanly.
 
