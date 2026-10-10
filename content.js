@@ -70,12 +70,8 @@
     };
   }
 
-  /**
-   * Calculates & displays precision badges for all works on the page
-   */
-  function applyPrecisionScoring() {
+  function getActiveCriteria() {
     var criteria = null;
-
     if (activePresetObj && activePresetObj.criteria) {
       criteria = activePresetObj.criteria;
     } else if (typeof parseAo3SearchUrl === 'function') {
@@ -91,8 +87,17 @@
         }
       }
     }
+    return criteria;
+  }
 
-    var works = document.querySelectorAll('ol.work.index > li.work, ul.work.index > li.work, ol.index.group > li.index.group, div.work');
+  /**
+   * Calculates & displays precision badges for all works on the page
+   */
+  function applyPrecisionScoring(contextDoc) {
+    var doc = contextDoc || document;
+    var criteria = getActiveCriteria();
+
+    var works = doc.querySelectorAll('ol.work.index > li.work, ul.work.index > li.work, ol.index.group > li.index.group, div.work');
 
     works.forEach(function(workEl) {
       var workTags = extractWorkDetailsFromDom(workEl);
@@ -148,20 +153,105 @@
     });
 
     // Provide visual button feedback
-    var sortBtns = document.querySelectorAll('#ao3-btn-sort-precision, #ao3-btn-top-sort');
+    updateSortButtonsText('✓ Sorted ' + worksArray.length + ' Stories on Page!', '#2e7d32');
+  }
+
+  /**
+   * Multi-Page Prefetching & Sorting:
+   * Fetches next N pages of AO3 search results, scores all works across pages,
+   * and displays the top-ranked matches straight on screen.
+   */
+  function prefetchAndSortMultiPages(maxPagesToFetch) {
+    maxPagesToFetch = maxPagesToFetch || 5;
+
+    var container = document.querySelector('ol.work.index, ul.work.index, ol.index.group');
+    if (!container) return;
+
+    updateSortButtonsText('⏳ Prefetching pages 1 to ' + maxPagesToFetch + '...', '#ed6c02');
+
+    // Build page URLs to prefetch
+    var urlsToFetch = [];
+    var baseUrlStr = window.location.href;
+
+    for (var p = 2; p <= maxPagesToFetch; p++) {
+      var pUrl = new URL(baseUrlStr);
+      pUrl.searchParams.set('page', p.toString());
+      urlsToFetch.push(pUrl.toString());
+    }
+
+    var allWorksMap = new Map();
+
+    // Add current page works first
+    applyPrecisionScoring();
+    var currentWorks = Array.from(container.querySelectorAll(':scope > li.work, :scope > li.index.group'));
+    currentWorks.forEach(function(el, idx) {
+      var key = el.id || ('work_current_' + idx);
+      allWorksMap.set(key, el);
+    });
+
+    // Fetch subsequent pages in parallel
+    var fetchPromises = urlsToFetch.map(function(url) {
+      return fetch(url, { headers: { 'Accept': 'text/html' } })
+        .then(function(res) {
+          if (!res.ok) return '';
+          return res.text();
+        })
+        .then(function(htmlText) {
+          if (!htmlText) return;
+          var parser = new DOMParser();
+          var doc = parser.parseFromString(htmlText, 'text/html');
+          applyPrecisionScoring(doc);
+          var fetchedWorks = doc.querySelectorAll('ol.work.index > li.work, ul.work.index > li.work, ol.index.group > li.index.group, div.work');
+
+          fetchedWorks.forEach(function(wEl, idx) {
+            var key = wEl.id || ('work_fetched_' + url + '_' + idx);
+            if (!allWorksMap.has(key)) {
+              // Import element into active document context
+              var importedEl = document.importNode(wEl, true);
+              allWorksMap.set(key, importedEl);
+            }
+          });
+        })
+        .catch(function(err) {
+          console.warn('Failed to prefetch page:', url, err);
+        });
+    });
+
+    Promise.all(fetchPromises).then(function() {
+      var combinedWorks = Array.from(allWorksMap.values());
+
+      combinedWorks.sort(function(a, b) {
+        var scoreA = parseInt(a.dataset.precisionScore || '0', 10);
+        var scoreB = parseInt(b.dataset.precisionScore || '0', 10);
+        return scoreB - scoreA;
+      });
+
+      // Clear container and append all pre-fetched, re-ranked works!
+      container.innerHTML = '';
+      combinedWorks.forEach(function(workEl) {
+        container.appendChild(workEl);
+      });
+
+      updateSortButtonsText('✓ Prefetched & Ranked ' + combinedWorks.length + ' Stories!', '#2e7d32');
+    });
+  }
+
+  function updateSortButtonsText(text, bg) {
+    var sortBtns = document.querySelectorAll('#ao3-btn-sort-precision, #ao3-btn-top-sort, #ao3-btn-multipage-sort');
     sortBtns.forEach(function(btn) {
-      var origText = btn.textContent;
-      btn.textContent = '✓ Sorted ' + worksArray.length + ' Stories by Match!';
-      btn.style.backgroundColor = '#2e7d32';
+      var origText = btn.dataset.origText || btn.textContent;
+      btn.dataset.origText = origText;
+      btn.textContent = text;
+      if (bg) btn.style.backgroundColor = bg;
       setTimeout(function() {
         btn.textContent = origText;
         btn.style.backgroundColor = '';
-      }, 2500);
+      }, 3500);
     });
   }
 
   /**
-   * Injects a quick-sort button right above the main works list
+   * Injects quick-sort buttons right above the main works list
    */
   function injectTopSortBar() {
     var existingBar = document.getElementById('ao3-top-sort-bar');
@@ -172,19 +262,23 @@
 
     var topBar = document.createElement('div');
     topBar.id = 'ao3-top-sort-bar';
-    topBar.style.cssText = 'margin-bottom: 14px; display: flex; justify-content: flex-end; align-items: center; background: #fafafa; border: 1px solid #e0e0e0; border-radius: 6px; padding: 8px 12px;';
+    topBar.style.cssText = 'margin-bottom: 14px; display: flex; justify-content: flex-end; align-items: center; gap: 8px; background: #fafafa; border: 1px solid #e0e0e0; border-radius: 6px; padding: 8px 12px; flex-wrap: wrap;';
 
-    topBar.innerHTML = '<span style="font-weight: 600; font-size: 0.9em; margin-right: 12px; color: #444;">AO3 Companion:</span>' +
-      '<button id="ao3-btn-top-sort" class="ao3-companion-btn ao3-companion-btn-accent" style="width: auto; min-height: 36px; padding: 6px 14px; margin-bottom: 0;">' +
-      '🎯 Sort Page by Match %' +
+    topBar.innerHTML = '<span style="font-weight: 600; font-size: 0.9em; margin-right: auto; color: #444;">AO3 Companion:</span>' +
+      '<button id="ao3-btn-top-sort" class="ao3-companion-btn ao3-companion-btn-accent" style="width: auto; min-height: 36px; padding: 6px 12px; margin-bottom: 0;">' +
+      '🎯 Sort Page' +
+      '</button>' +
+      '<button id="ao3-btn-multipage-sort" class="ao3-companion-btn ao3-companion-btn-success" style="width: auto; min-height: 36px; padding: 6px 12px; margin-bottom: 0;">' +
+      '🚀 Fetch & Sort Top 5 Pages' +
       '</button>';
 
     worksList.parentNode.insertBefore(topBar, worksList);
 
     var topBtn = topBar.querySelector('#ao3-btn-top-sort');
-    if (topBtn) {
-      topBtn.addEventListener('click', sortWorksByPrecision);
-    }
+    if (topBtn) topBtn.addEventListener('click', sortWorksByPrecision);
+
+    var multiBtn = topBar.querySelector('#ao3-btn-multipage-sort');
+    if (multiBtn) multiBtn.addEventListener('click', function() { prefetchAndSortMultiPages(5); });
   }
 
   /**
@@ -240,7 +334,8 @@
 
     html += '<div class="ao3-companion-field" style="margin-top: 14px; border-top: 1px dashed #d0d0d0; padding-top: 12px;">';
     html += '<label style="color: #6200ee; font-weight: 700;">🎯 Sorting Options:</label>';
-    html += '<button id="ao3-btn-sort-precision" class="ao3-companion-btn ao3-companion-btn-accent">🎯 Sort Results by Match %</button>';
+    html += '<button id="ao3-btn-sort-precision" class="ao3-companion-btn ao3-companion-btn-accent">🎯 Sort Page by Match %</button>';
+    html += '<button id="ao3-btn-sidebar-multipage" class="ao3-companion-btn ao3-companion-btn-success">🚀 Fetch & Sort Top 5 Pages</button>';
     html += '</div>';
 
     widget.innerHTML = html;
@@ -331,9 +426,10 @@
     }
 
     var btnSort = widget.querySelector('#ao3-btn-sort-precision');
-    if (btnSort) {
-      btnSort.addEventListener('click', sortWorksByPrecision);
-    }
+    if (btnSort) btnSort.addEventListener('click', sortWorksByPrecision);
+
+    var btnMultiSide = widget.querySelector('#ao3-btn-sidebar-multipage');
+    if (btnMultiSide) btnMultiSide.addEventListener('click', function() { prefetchAndSortMultiPages(5); });
   }
 
   function escapeHtml(str) {

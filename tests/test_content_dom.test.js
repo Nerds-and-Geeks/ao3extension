@@ -63,12 +63,33 @@ async function testDomSuite() {
   const window = dom.window;
   const document = window.document;
 
-  // Polyfill localStorage & chrome storage in JSDOM
+  // Polyfill localStorage & fetch in JSDOM
   window.localStorage = {
     store: {},
     getItem(key) { return this.store[key] || null; },
     setItem(key, val) { this.store[key] = String(val); },
     removeItem(key) { delete this.store[key]; }
+  };
+
+  const fetchedPageHtml = `
+    <html><body><ol class="work index group">
+      <li class="work id_103" id="work_103">
+        <div class="header module">
+          <h4 class="heading"><a href="/works/103">Fetched Page Story</a></h4>
+          <h5 class="fandoms heading"><a href="/tags/Superman%20(Movie%202025)/works">Superman (Movie 2025)</a></h5>
+        </div>
+        <ul class="tags commas">
+          <li class="relationships"><a href="/tags/Clark%20Kent*s*Lois%20Lane">Clark Kent/Lois Lane</a></li>
+        </ul>
+      </li>
+    </ol></body></html>
+  `;
+
+  window.fetch = function(url) {
+    return Promise.resolve({
+      ok: true,
+      text: function() { return Promise.resolve(fetchedPageHtml); }
+    });
   };
 
   // Load scripts into JSDOM window
@@ -116,7 +137,7 @@ async function testDomSuite() {
   // After click, work_102 (100% Exact Match) must be moved to first position in DOM!
   const firstWorkAfter = document.querySelector('ol.work.index > li.work');
   assert.strictEqual(firstWorkAfter.id, 'work_102', 'Work 102 (100% Exact Match) must be moved to the top of the search results');
-  console.log('  ✓ 3.3 Clicking "⚡ Prioritize Most Matches" successfully moved 100% Exact Match work straight to the top of the screen');
+  console.log('  ✓ 3.3 Clicking "🎯 Sort Page" successfully moved 100% Exact Match work straight to the top of the screen');
 
   // Test 3.4: Save Preset via Widget Button (Requirement 1)
   const inputName = document.getElementById('ao3-preset-name-input');
@@ -135,6 +156,16 @@ async function testDomSuite() {
   const btnOverwrite = document.getElementById('ao3-btn-overwrite-preset');
   assert(btnOverwrite, 'Overwrite button must be rendered when a preset is active');
   console.log('  ✓ 3.5 Overwrite button properly displayed for active preset');
+
+  // Test 3.6: Multi-Page Prefetch & Sort
+  const btnMulti = document.getElementById('ao3-btn-multipage-sort');
+  assert(btnMulti, 'Multi-page sort button must exist in top bar');
+  btnMulti.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  await new Promise(r => setTimeout(r, 300));
+
+  const worksAfterMulti = document.querySelectorAll('ol.work.index > li.work');
+  assert(worksAfterMulti.length >= 3, 'Multi-page prefetching must append prefetched works into DOM');
+  console.log(`  ✓ 3.6 Multi-page prefetching & sorting successfully fetched and ranked ${worksAfterMulti.length} stories across pages`);
 }
 
 module.exports = testDomSuite;
