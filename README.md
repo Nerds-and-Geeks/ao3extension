@@ -41,10 +41,13 @@ Calculates an exact match score for every fanfiction on the page. The score is e
 
 ### Method 1: Download Release Package (Quickest & Recommended)
 
-1. **Download the Latest Release**:
+1. **Download & Extract the Release**:
    - Go to the [Releases](https://github.com/Nerds-and-Geeks/ao3extension/releases) page on GitHub.
    - Download `ao3-companion-extension-v2.0.0.zip` from the latest release assets.
-   - Unzip/extract the zip file to a folder on your computer.
+   - **Double-click to unzip/extract** the file into a folder on your computer.
+
+> [!IMPORTANT]
+> **Chrome cannot load `.zip` files directly.** The "Load unpacked" button in Chrome requires you to select the **extracted folder**, NOT the `.zip` file!
 
 2. **Open Chrome Extensions**:
    - Open Google Chrome (or Chromium-based browsers like Brave, Edge, or Opera).
