@@ -95,6 +95,39 @@
   }
 
   /**
+   * Detects total available pages from AO3 pagination links or heading text
+   */
+  function detectMaxAvailablePages() {
+    var maxPage = 1;
+
+    // Check pagination links
+    var pageLinks = document.querySelectorAll('ol.pagination li a, ul.pagination li a');
+    pageLinks.forEach(function(a) {
+      var text = a.textContent.trim();
+      if (/^\d+$/.test(text)) {
+        var num = parseInt(text, 10);
+        if (num > maxPage) maxPage = num;
+      }
+    });
+
+    // Fallback: Check heading text like "1 - 20 of 1,245 Works"
+    if (maxPage === 1) {
+      var heading = document.querySelector('h2.heading, h3.heading, .heading');
+      if (heading && heading.textContent) {
+        var match = heading.textContent.match(/of\s+([\d,]+)\s+Works/i);
+        if (match && match[1]) {
+          var totalWorks = parseInt(match[1].replace(/,/g, ''), 10);
+          if (totalWorks > 0) {
+            maxPage = Math.ceil(totalWorks / 20);
+          }
+        }
+      }
+    }
+
+    return Math.min(maxPage, 30);
+  }
+
+  /**
    * Calculates & displays precision badges for all works on the page
    */
   function applyPrecisionScoring(contextDoc) {
@@ -264,7 +297,7 @@
 
   /**
    * Multi-Page Prefetching & Sorting (Up to 30 Pages / 600 Works):
-   * Batches fetching of up to 30 pages of AO3 search results, scores all works,
+   * Batches fetching of up to N pages of AO3 search results, scores all works,
    * and renders custom sorted pagination controls.
    */
   function prefetchAndSortMultiPages(maxPagesToFetch) {
@@ -354,7 +387,7 @@
   }
 
   function updateSortButtonsText(text, bg) {
-    var sortBtns = document.querySelectorAll('#ao3-btn-top-sort, #ao3-btn-multipage-sort, #ao3-btn-multipage-30');
+    var sortBtns = document.querySelectorAll('#ao3-btn-fetch-sort');
     sortBtns.forEach(function(btn) {
       var origText = btn.dataset.origText || btn.textContent;
       btn.dataset.origText = origText;
@@ -376,6 +409,8 @@
 
     var worksList = document.querySelector('ol.work.index, ul.work.index, ol.index.group');
     if (!worksList) return;
+
+    var detectedMax = detectMaxAvailablePages();
 
     var topWidget = document.createElement('div');
     topWidget.id = 'ao3-companion-top-bar';
@@ -426,12 +461,23 @@
 
     html += '</div>';
 
-    // Precision Match Sorting Row
+    // Streamlined Precision Match Sorting Controls (Dropdown + Fetch & Sort Button)
     html += '<div style="display:flex; gap:8px; align-items:center; border-top:1px dashed #d0d0d0; padding-top:12px; flex-wrap:wrap;">';
     html += '<span style="font-weight:700; font-size:0.9em; color:#6200ee; margin-right:auto;">🎯 Precision Match Sorting:</span>';
-    html += '<button id="ao3-btn-top-sort" class="ao3-companion-btn ao3-companion-btn-accent" style="width:auto; margin-bottom:0;">🎯 Sort Current Page</button>';
-    html += '<button id="ao3-btn-multipage-sort" class="ao3-companion-btn ao3-companion-btn-secondary" style="width:auto; margin-bottom:0;">⚡ Fetch 5 Pages</button>';
-    html += '<button id="ao3-btn-multipage-30" class="ao3-companion-btn ao3-companion-btn-success" style="width:auto; margin-bottom:0;">🚀 Fetch Up to 30 Pages</button>';
+    html += '<label for="ao3-sort-depth-select" style="font-size:0.88em; color:#444; font-weight:600;">Depth:</label>';
+    html += '<select id="ao3-sort-depth-select" class="ao3-companion-select" style="width:auto; margin-bottom:0; font-weight:600;">';
+    html += '<option value="1">Current Page (20 Stories)</option>';
+    html += '<option value="5" selected>5 Pages (100 Stories)</option>';
+    html += '<option value="10">10 Pages (200 Stories)</option>';
+    html += '<option value="15">15 Pages (300 Stories)</option>';
+    html += '<option value="20">20 Pages (400 Stories)</option>';
+    html += '<option value="25">25 Pages (500 Stories)</option>';
+    html += '<option value="30">30 Pages (600 Stories)</option>';
+    if (detectedMax > 1 && detectedMax !== 5 && detectedMax !== 10 && detectedMax !== 15 && detectedMax !== 20 && detectedMax !== 25 && detectedMax !== 30) {
+      html += '<option value="' + detectedMax + '">Max Available (' + detectedMax + ' Pages / ' + (detectedMax * 20) + ' Stories)</option>';
+    }
+    html += '</select>';
+    html += '<button id="ao3-btn-fetch-sort" class="ao3-companion-btn ao3-companion-btn-accent" style="width:auto; margin-bottom:0; white-space:nowrap;">🚀 Fetch & Sort Matches</button>';
     html += '</div>';
 
     topWidget.innerHTML = html;
@@ -513,14 +559,19 @@
       });
     }
 
-    var topBtn = topWidget.querySelector('#ao3-btn-top-sort');
-    if (topBtn) topBtn.addEventListener('click', sortWorksByPrecision);
+    var btnFetchSort = topWidget.querySelector('#ao3-btn-fetch-sort');
+    if (btnFetchSort) {
+      btnFetchSort.addEventListener('click', function() {
+        var selectDepth = topWidget.querySelector('#ao3-sort-depth-select');
+        var targetDepth = selectDepth ? parseInt(selectDepth.value, 10) : 5;
 
-    var multiBtn5 = topWidget.querySelector('#ao3-btn-multipage-sort');
-    if (multiBtn5) multiBtn5.addEventListener('click', function() { prefetchAndSortMultiPages(5); });
-
-    var multiBtn30 = topWidget.querySelector('#ao3-btn-multipage-30');
-    if (multiBtn30) multiBtn30.addEventListener('click', function() { prefetchAndSortMultiPages(30); });
+        if (targetDepth <= 1) {
+          sortWorksByPrecision();
+        } else {
+          prefetchAndSortMultiPages(targetDepth);
+        }
+      });
+    }
   }
 
   function escapeHtml(str) {

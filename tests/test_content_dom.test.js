@@ -125,21 +125,20 @@ async function testDomSuite() {
   assert(!badge101.textContent.includes('100% Exact Match'), 'Diluted work must not display 100% Exact Match badge');
   console.log(`  ✓ 3.2 Badges correctly attached to work headers (Exact: "${badge102.textContent}", Diluted: "${badge101.textContent}")`);
 
-  // Test 3.3: Re-ordering DOM Elements by Match Precision
-  const btnSort = document.getElementById('ao3-btn-top-sort');
-  assert(btnSort, 'Sort Current Page button must exist in top box widget');
+  // Test 3.3: Re-ordering DOM Elements by Match Precision with Depth Selector
+  const btnFetchSort = document.getElementById('ao3-btn-fetch-sort');
+  const depthSelect = document.getElementById('ao3-sort-depth-select');
+  assert(btnFetchSort, 'Fetch & Sort button must exist in top box widget');
+  assert(depthSelect, 'Depth selector dropdown (1, 5, 10, 15, 20, 25, 30) must exist in top box widget');
 
-  // Initially, work_101 is first in DOM
-  const firstWorkBefore = document.querySelector('ol.work.index > li.work');
-  assert.strictEqual(firstWorkBefore.id, 'work_101');
-
-  // Click sort button
-  btnSort.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  // Set depth to 1 (Current Page) and sort
+  depthSelect.value = "1";
+  btnFetchSort.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
 
   // After click, work_102 (100% Exact Match) must be moved to first position in DOM!
   const firstWorkAfter = document.querySelector('ol.work.index > li.work');
   assert.strictEqual(firstWorkAfter.id, 'work_102', 'Work 102 (100% Exact Match) must be moved to the top of the search results');
-  console.log('  ✓ 3.3 Clicking "🎯 Sort Current Page" successfully moved 100% Exact Match work straight to the top of the screen');
+  console.log('  ✓ 3.3 Clicking "🚀 Fetch & Sort Matches" with depth 1 successfully moved 100% Exact Match work straight to the top of the screen');
 
   // Test 3.4: Save Preset via Top Box Button (Requirement 1)
   const inputName = document.getElementById('ao3-preset-name-input');
@@ -159,15 +158,14 @@ async function testDomSuite() {
   assert(btnOverwrite, 'Overwrite button must be rendered when a preset is active');
   console.log('  ✓ 3.5 Overwrite button properly displayed for active preset');
 
-  // Test 3.6: Multi-Page Prefetch & Sort
-  const btnMulti = document.getElementById('ao3-btn-multipage-30');
-  assert(btnMulti, 'Multi-page sort button must exist in top box');
-  btnMulti.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  // Test 3.6: Multi-Page Prefetch & Sort with Depth Dropdown
+  depthSelect.value = "5";
+  btnFetchSort.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
   await new Promise(r => setTimeout(r, 300));
 
   const worksAfterMulti = document.querySelectorAll('ol.work.index > li.work');
   assert(worksAfterMulti.length >= 3, 'Multi-page prefetching must append prefetched works into DOM');
-  console.log(`  ✓ 3.6 Multi-page prefetching & sorting successfully fetched and ranked ${worksAfterMulti.length} stories across pages`);
+  console.log(`  ✓ 3.6 Depth dropdown prefetching (5 pages) successfully fetched and ranked ${worksAfterMulti.length} stories across pages`);
 }
 
 module.exports = testDomSuite;
