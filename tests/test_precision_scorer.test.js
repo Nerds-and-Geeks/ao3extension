@@ -4,7 +4,7 @@ const Scorer = require('../lib/precision-scorer.js');
 async function testScorerSuite() {
   console.log('\n--- 🧪 TEST SUITE 2: TAG PRECISION MATCH SCORER ---');
 
-  // Test 2.1: Relationship Tag Classification (/ = 5% deduction, & = 0.5% deduction)
+  // Test 2.1: Relationship Tag Classification (/ = 5% deduction, & = 2% deduction)
   const presetCriteria = {
     relationships: ['Clark Kent/Lois Lane'],
     fandoms: ['Superman (Movie 2025)']
@@ -20,8 +20,8 @@ async function testScorerSuite() {
     relationships: [
       'Clark Kent/Lois Lane',
       'Bruce Wayne/Diana Prince', // 1 extra romance (/) -> -5%
-      'Clark Kent & Bruce Wayne', // 1 extra friendship (&) -> -0.5%
-      'Lois Lane & Jimmy Olsen'   // 1 extra friendship (&) -> -0.5%
+      'Clark Kent & Bruce Wayne', // 1 extra friendship (&) -> -2%
+      'Lois Lane & Jimmy Olsen'   // 1 extra friendship (&) -> -2%
     ]
   };
 
@@ -31,11 +31,11 @@ async function testScorerSuite() {
   assert.strictEqual(scoreExact.scorePercent, 100);
   assert.strictEqual(scoreExact.label, '🎯 100% Exact Match');
 
-  // Penalty = 5% (romance) + 0.5% + 0.5% (friendships) = 6% -> Relationship score = 94%
-  // Overall score: (100% fandom + 94% relationship) / 2 = 97%
-  assert.strictEqual(scoreMixed.categoryScores.relationships.precision, 0.94, 'Relationship precision must be 94% (5% romance penalty + 1% friendship penalty)');
-  assert.strictEqual(scoreMixed.scorePercent, 97, 'Overall score must be 97%');
-  console.log(`  ✓ 2.1 Relationship extra romance (5%) and friendship (0.5%) penalties accurately calculated (${scoreMixed.scorePercent}%)`);
+  // Penalty = 5% (romance) + 2% + 2% (friendships) = 9% -> Relationship score = 91%
+  // Overall score: (100% fandom + 91% relationship) / 2 = 95.5% -> 96%
+  assert.strictEqual(scoreMixed.categoryScores.relationships.precision, 0.91, 'Relationship precision must be 91% (5% romance penalty + 4% friendship penalty)');
+  assert.strictEqual(scoreMixed.scorePercent, 96, 'Overall score must be 96%');
+  console.log(`  ✓ 2.1 Relationship extra romance (5%) and friendship (2%) penalties accurately calculated (${scoreMixed.scorePercent}%)`);
 
   // Test 2.2: Unrelated / Missing Work
   const missingWork = {
@@ -86,6 +86,25 @@ async function testScorerSuite() {
   const scoreEmpty = Scorer.calculatePrecisionScore(exactWork, null);
   assert.strictEqual(scoreEmpty.scorePercent, 100);
   console.log('  ✓ 2.6 Null preset criteria defaults cleanly to 100% base match for single-fandom work');
+
+  // Test 2.7: User Reported Scenario (2 extra friendship tags deduct 4%) & Rounding Protection
+  const userReportedWork = {
+    fandoms: ['Superman (Movie 2025)'],
+    relationships: [
+      'Clark Kent/Lois Lane',
+      'Justice Gang Members & Clark Kent', // extra friendship -> -2%
+      'Joey Mason & Rex Mason'            // extra friendship -> -2%
+    ]
+  };
+  const scoreUserWork = Scorer.calculatePrecisionScore(userReportedWork, presetCriteria);
+  assert.strictEqual(scoreUserWork.categoryScores.relationships.precision, 0.96, '2 extra friendship tags must deduct 4% total (2% each)');
+  assert.strictEqual(scoreUserWork.scorePercent, 98, 'Score with 2 extra friendship tags must be 98%, NOT 100%');
+  assert.notStrictEqual(scoreUserWork.label, '🎯 100% Exact Match', 'Work with penalties must NOT be labeled 100% Exact Match');
+
+  // Rounding protection check: a small penalty (e.g. 0.2% penalty -> finalScore = 0.998) must cap at 99%, NOT round to 100%
+  const tinyPenaltyScore = Scorer.calculatePrecisionScore(userReportedWork, presetCriteria, { friendshipPenaltyPct: 0.1 });
+  assert.strictEqual(tinyPenaltyScore.scorePercent, 99, 'Non-perfect match with tiny penalty must cap at 99%');
+  console.log(`  ✓ 2.7 Work with 2 extra friendship tags accurately dings 4% (98%) and score capping protects 100% badge`);
 }
 
 module.exports = testScorerSuite;
