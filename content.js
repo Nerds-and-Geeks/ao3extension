@@ -17,8 +17,7 @@
   // Initialize extension on page load
   function init() {
     loadPresetsState().then(function() {
-      injectSidebarWidget();
-      injectTopSortBar();
+      injectTopBarWidget();
       applyPrecisionScoring();
     });
   }
@@ -355,7 +354,7 @@
   }
 
   function updateSortButtonsText(text, bg) {
-    var sortBtns = document.querySelectorAll('#ao3-btn-sort-precision, #ao3-btn-top-sort, #ao3-btn-multipage-sort, #ao3-btn-multipage-30');
+    var sortBtns = document.querySelectorAll('#ao3-btn-top-sort, #ao3-btn-multipage-sort, #ao3-btn-multipage-30');
     sortBtns.forEach(function(btn) {
       var origText = btn.dataset.origText || btn.textContent;
       btn.dataset.origText = origText;
@@ -369,112 +368,80 @@
   }
 
   /**
-   * Injects quick-sort buttons right above the main works list
+   * Injects the Unified Top Control Box directly above search results
    */
-  function injectTopSortBar() {
-    var existingBar = document.getElementById('ao3-top-sort-bar');
+  function injectTopBarWidget() {
+    var existingBar = document.getElementById('ao3-companion-top-bar');
     if (existingBar) existingBar.remove();
 
     var worksList = document.querySelector('ol.work.index, ul.work.index, ol.index.group');
     if (!worksList) return;
 
-    var topBar = document.createElement('div');
-    topBar.id = 'ao3-top-sort-bar';
-    topBar.style.cssText = 'margin-bottom: 14px; display: flex; justify-content: flex-end; align-items: center; gap: 8px; background: #fafafa; border: 1px solid #e0e0e0; border-radius: 6px; padding: 8px 12px; flex-wrap: wrap;';
+    var topWidget = document.createElement('div');
+    topWidget.id = 'ao3-companion-top-bar';
+    topWidget.className = 'ao3-companion-widget';
+    topWidget.style.marginBottom = '16px';
 
-    topBar.innerHTML = '<span style="font-weight: 600; font-size: 0.9em; margin-right: auto; color: #444;">AO3 Companion:</span>' +
-      '<button id="ao3-btn-top-sort" class="ao3-companion-btn ao3-companion-btn-accent" style="width: auto; min-height: 36px; padding: 6px 12px; margin-bottom: 0;">' +
-      '🎯 Sort Page' +
-      '</button>' +
-      '<button id="ao3-btn-multipage-sort" class="ao3-companion-btn ao3-companion-btn-secondary" style="width: auto; min-height: 36px; padding: 6px 12px; margin-bottom: 0;">' +
-      '⚡ Fetch 5 Pages' +
-      '</button>' +
-      '<button id="ao3-btn-multipage-30" class="ao3-companion-btn ao3-companion-btn-success" style="width: auto; min-height: 36px; padding: 6px 12px; margin-bottom: 0;">' +
-      '🚀 Fetch Up to 30 Pages' +
-      '</button>';
-
-    worksList.parentNode.insertBefore(topBar, worksList);
-
-    var topBtn = topBar.querySelector('#ao3-btn-top-sort');
-    if (topBtn) topBtn.addEventListener('click', sortWorksByPrecision);
-
-    var multiBtn5 = topBar.querySelector('#ao3-btn-multipage-sort');
-    if (multiBtn5) multiBtn5.addEventListener('click', function() { prefetchAndSortMultiPages(5); });
-
-    var multiBtn30 = topBar.querySelector('#ao3-btn-multipage-30');
-    if (multiBtn30) multiBtn30.addEventListener('click', function() { prefetchAndSortMultiPages(30); });
-  }
-
-  /**
-   * Injects Sidebar Control Widget into AO3 page
-   */
-  function injectSidebarWidget() {
-    var existingWidget = document.getElementById('ao3-companion-widget-container');
-    if (existingWidget) existingWidget.remove();
-
-    var targetContainer = document.querySelector('#sidebar, #filters, form#work_search, .region[role="complementary"]');
-    if (!targetContainer) {
-      targetContainer = document.querySelector('#main');
-    }
-    if (!targetContainer) return;
-
-    var widget = document.createElement('div');
-    widget.id = 'ao3-companion-widget-container';
-    widget.className = 'ao3-companion-widget';
-
-    var html = '<h3>AO3 Companion</h3>';
-
+    var html = '<h3>';
+    html += '<span>AO3 Companion</span>';
     if (activePresetObj) {
-      html += '<div class="ao3-companion-status active">';
-      html += '<strong>Active Preset:</strong> ' + escapeHtml(activePresetObj.name);
-      html += '</div>';
-      html += '<button id="ao3-btn-overwrite-preset" class="ao3-companion-btn ao3-companion-btn-success">💾 Save Current Search on Top (Overwrite)</button>';
-      html += '<button id="ao3-btn-clear-active" class="ao3-companion-btn ao3-companion-btn-secondary">❌ Clear Active Preset</button>';
-    } else {
-      html += '<div class="ao3-companion-status">';
-      html += '<em>No active preset loaded.</em>';
+      html += '<span style="font-size:0.8em; font-weight:normal; color:#1b5e20; background:#eaf6ec; border:1px solid #9bd6a7; padding:3px 10px; border-radius:12px;">Active Preset: <strong>' + escapeHtml(activePresetObj.name) + '</strong></span>';
+    }
+    html += '</h3>';
+
+    // Active Preset Action Row
+    if (activePresetObj) {
+      html += '<div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;">';
+      html += '<button id="ao3-btn-overwrite-preset" class="ao3-companion-btn ao3-companion-btn-success" style="width:auto; margin-bottom:0;">💾 Save Current Search on Top (' + escapeHtml(activePresetObj.name) + ')</button>';
+      html += '<button id="ao3-btn-clear-active" class="ao3-companion-btn ao3-companion-btn-secondary" style="width:auto; margin-bottom:0;">❌ Clear Active Preset</button>';
       html += '</div>';
     }
 
-    html += '<div class="ao3-companion-field" style="margin-top: 12px;">';
-    html += '<label for="ao3-preset-name-input">Save Current Search as New Preset:</label>';
-    html += '<input type="text" id="ao3-preset-name-input" class="ao3-companion-input" placeholder="e.g. Clark/Lois Canon Divergence" />';
-    html += '<button id="ao3-btn-save-new" class="ao3-companion-btn">⭐ Save New Preset</button>';
+    // Save & Load Row
+    html += '<div style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap; margin-bottom:12px;">';
+    
+    html += '<div style="flex:1; min-width:240px;">';
+    html += '<label for="ao3-preset-name-input" style="font-weight:600; font-size:0.85em; display:block; margin-bottom:4px; color:#444;">Save Current Search as Preset:</label>';
+    html += '<div style="display:flex; gap:6px;">';
+    html += '<input type="text" id="ao3-preset-name-input" class="ao3-companion-input" placeholder="e.g. Clark/Lois Canon Divergence" style="margin-bottom:0;" />';
+    html += '<button id="ao3-btn-save-new" class="ao3-companion-btn" style="width:auto; white-space:nowrap; margin-bottom:0;">⭐ Save Preset</button>';
+    html += '</div>';
     html += '</div>';
 
     if (currentPresets.length > 0) {
-      html += '<div class="ao3-companion-field" style="margin-top: 12px;">';
-      html += '<label for="ao3-preset-select">Saved Presets (' + currentPresets.length + '):</label>';
-      html += '<select id="ao3-preset-select" class="ao3-companion-select">';
-      html += '<option value="">-- Select a Preset --</option>';
+      html += '<div style="flex:1; min-width:240px;">';
+      html += '<label for="ao3-preset-select" style="font-weight:600; font-size:0.85em; display:block; margin-bottom:4px; color:#444;">Load Saved Preset (' + currentPresets.length + '):</label>';
+      html += '<div style="display:flex; gap:6px;">';
+      html += '<select id="ao3-preset-select" class="ao3-companion-select" style="margin-bottom:0;">';
+      html += '<option value="">-- Select Preset --</option>';
       currentPresets.forEach(function(p) {
         var selected = (p.id === activePresetId) ? ' selected' : '';
         html += '<option value="' + escapeHtml(p.id) + '"' + selected + '>' + escapeHtml(p.name) + '</option>';
       });
       html += '</select>';
-      html += '<button id="ao3-btn-load-preset" class="ao3-companion-btn ao3-companion-btn-secondary">🚀 Load Selected Preset</button>';
+      html += '<button id="ao3-btn-load-preset" class="ao3-companion-btn ao3-companion-btn-secondary" style="width:auto; white-space:nowrap; margin-bottom:0;">🚀 Load</button>';
+      html += '</div>';
       html += '</div>';
     }
 
-    html += '<div class="ao3-companion-field" style="margin-top: 14px; border-top: 1px dashed #d0d0d0; padding-top: 12px;">';
-    html += '<label style="color: #6200ee; font-weight: 700;">🎯 Sorting Options:</label>';
-    html += '<button id="ao3-btn-sort-precision" class="ao3-companion-btn ao3-companion-btn-accent">🎯 Sort Page by Match %</button>';
-    html += '<button id="ao3-btn-sidebar-multipage" class="ao3-companion-btn ao3-companion-btn-success">🚀 Fetch & Sort Up to 30 Pages</button>';
     html += '</div>';
 
-    widget.innerHTML = html;
+    // Precision Match Sorting Row
+    html += '<div style="display:flex; gap:8px; align-items:center; border-top:1px dashed #d0d0d0; padding-top:12px; flex-wrap:wrap;">';
+    html += '<span style="font-weight:700; font-size:0.9em; color:#6200ee; margin-right:auto;">🎯 Precision Match Sorting:</span>';
+    html += '<button id="ao3-btn-top-sort" class="ao3-companion-btn ao3-companion-btn-accent" style="width:auto; margin-bottom:0;">🎯 Sort Current Page</button>';
+    html += '<button id="ao3-btn-multipage-sort" class="ao3-companion-btn ao3-companion-btn-secondary" style="width:auto; margin-bottom:0;">⚡ Fetch 5 Pages</button>';
+    html += '<button id="ao3-btn-multipage-30" class="ao3-companion-btn ao3-companion-btn-success" style="width:auto; margin-bottom:0;">🚀 Fetch Up to 30 Pages</button>';
+    html += '</div>';
 
-    if (targetContainer.firstChild) {
-      targetContainer.insertBefore(widget, targetContainer.firstChild);
-    } else {
-      targetContainer.appendChild(widget);
-    }
+    topWidget.innerHTML = html;
+    worksList.parentNode.insertBefore(topWidget, worksList);
 
     // Attach Event Listeners
-    var btnSaveNew = widget.querySelector('#ao3-btn-save-new');
+    var btnSaveNew = topWidget.querySelector('#ao3-btn-save-new');
     if (btnSaveNew) {
       btnSaveNew.addEventListener('click', function() {
-        var input = widget.querySelector('#ao3-preset-name-input');
+        var input = topWidget.querySelector('#ao3-preset-name-input');
         var name = input ? input.value.trim() : '';
         if (!name) {
           alert('Please enter a name for the preset.');
@@ -487,8 +454,7 @@
             }
           }).then(function() {
             loadPresetsState().then(function() {
-              injectSidebarWidget();
-              injectTopSortBar();
+              injectTopBarWidget();
               applyPrecisionScoring();
             });
           });
@@ -496,15 +462,14 @@
       });
     }
 
-    var btnOverwrite = widget.querySelector('#ao3-btn-overwrite-preset');
+    var btnOverwrite = topWidget.querySelector('#ao3-btn-overwrite-preset');
     if (btnOverwrite && activePresetId) {
       btnOverwrite.addEventListener('click', function() {
         if (confirm('Overwrite "' + activePresetObj.name + '" with current search URL parameters?')) {
           if (typeof overwritePreset === 'function') {
             overwritePreset(activePresetId, window.location.href).then(function() {
               loadPresetsState().then(function() {
-                injectSidebarWidget();
-                injectTopSortBar();
+                injectTopBarWidget();
                 applyPrecisionScoring();
                 alert('Preset successfully updated!');
               });
@@ -514,14 +479,13 @@
       });
     }
 
-    var btnClear = widget.querySelector('#ao3-btn-clear-active');
+    var btnClear = topWidget.querySelector('#ao3-btn-clear-active');
     if (btnClear) {
       btnClear.addEventListener('click', function() {
         if (typeof setActivePresetId === 'function') {
           setActivePresetId(null).then(function() {
             loadPresetsState().then(function() {
-              injectSidebarWidget();
-              injectTopSortBar();
+              injectTopBarWidget();
               applyPrecisionScoring();
             });
           });
@@ -529,10 +493,10 @@
       });
     }
 
-    var btnLoad = widget.querySelector('#ao3-btn-load-preset');
+    var btnLoad = topWidget.querySelector('#ao3-btn-load-preset');
     if (btnLoad) {
       btnLoad.addEventListener('click', function() {
-        var select = widget.querySelector('#ao3-preset-select');
+        var select = topWidget.querySelector('#ao3-preset-select');
         var selectedId = select ? select.value : null;
         if (!selectedId) {
           alert('Please select a preset to load.');
@@ -549,11 +513,14 @@
       });
     }
 
-    var btnSort = widget.querySelector('#ao3-btn-sort-precision');
-    if (btnSort) btnSort.addEventListener('click', sortWorksByPrecision);
+    var topBtn = topWidget.querySelector('#ao3-btn-top-sort');
+    if (topBtn) topBtn.addEventListener('click', sortWorksByPrecision);
 
-    var btnMultiSide = widget.querySelector('#ao3-btn-sidebar-multipage');
-    if (btnMultiSide) btnMultiSide.addEventListener('click', function() { prefetchAndSortMultiPages(30); });
+    var multiBtn5 = topWidget.querySelector('#ao3-btn-multipage-sort');
+    if (multiBtn5) multiBtn5.addEventListener('click', function() { prefetchAndSortMultiPages(5); });
+
+    var multiBtn30 = topWidget.querySelector('#ao3-btn-multipage-30');
+    if (multiBtn30) multiBtn30.addEventListener('click', function() { prefetchAndSortMultiPages(30); });
   }
 
   function escapeHtml(str) {

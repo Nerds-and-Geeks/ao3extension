@@ -104,10 +104,12 @@ async function testDomSuite() {
   // Wait for DOM promises to settle
   await new Promise(r => setTimeout(r, 200));
 
-  // Test 3.1: Sidebar Injection
-  const widget = document.getElementById('ao3-companion-widget-container');
-  assert(widget, 'Sidebar widget must be injected into DOM');
-  console.log('  ✓ 3.1 AO3 Companion sidebar widget successfully injected into DOM');
+  // Test 3.1: Top Box Widget Injection (User directive: single consolidated top control box above search results)
+  const topWidget = document.getElementById('ao3-companion-top-bar');
+  assert(topWidget, 'Unified top box widget #ao3-companion-top-bar must be injected into DOM');
+  const sidebarWidget = document.getElementById('ao3-companion-widget-container');
+  assert.strictEqual(sidebarWidget, null, 'Sidebar widget must NOT be injected into sidebar');
+  console.log('  ✓ 3.1 AO3 Companion top control box successfully injected directly above results (sidebar widget removed)');
 
   // Test 3.2: Badge Injection on Work Elements
   const work101Heading = document.querySelector('#work_101 h4.heading');
@@ -124,8 +126,8 @@ async function testDomSuite() {
   console.log(`  ✓ 3.2 Badges correctly attached to work headers (Exact: "${badge102.textContent}", Diluted: "${badge101.textContent}")`);
 
   // Test 3.3: Re-ordering DOM Elements by Match Precision
-  const btnSort = document.getElementById('ao3-btn-sort-precision');
-  assert(btnSort, 'Prioritize Most Matches button must exist in widget');
+  const btnSort = document.getElementById('ao3-btn-top-sort');
+  assert(btnSort, 'Sort Current Page button must exist in top box widget');
 
   // Initially, work_101 is first in DOM
   const firstWorkBefore = document.querySelector('ol.work.index > li.work');
@@ -137,9 +139,9 @@ async function testDomSuite() {
   // After click, work_102 (100% Exact Match) must be moved to first position in DOM!
   const firstWorkAfter = document.querySelector('ol.work.index > li.work');
   assert.strictEqual(firstWorkAfter.id, 'work_102', 'Work 102 (100% Exact Match) must be moved to the top of the search results');
-  console.log('  ✓ 3.3 Clicking "🎯 Sort Page" successfully moved 100% Exact Match work straight to the top of the screen');
+  console.log('  ✓ 3.3 Clicking "🎯 Sort Current Page" successfully moved 100% Exact Match work straight to the top of the screen');
 
-  // Test 3.4: Save Preset via Widget Button (Requirement 1)
+  // Test 3.4: Save Preset via Top Box Button (Requirement 1)
   const inputName = document.getElementById('ao3-preset-name-input');
   const btnSave = document.getElementById('ao3-btn-save-new');
   inputName.value = 'Superman Canon Divergence';
@@ -150,16 +152,16 @@ async function testDomSuite() {
   const state = await window.loadPresets();
   assert.strictEqual(state.presets.length, 1);
   assert.strictEqual(state.presets[0].name, 'Superman Canon Divergence');
-  console.log('  ✓ 3.4 Saving preset via widget UI succeeds');
+  console.log('  ✓ 3.4 Saving preset via top box UI succeeds');
 
-  // Test 3.5: Overwrite Preset via Widget Button (Requirement 2)
+  // Test 3.5: Overwrite Preset via Top Box Button (Requirement 2)
   const btnOverwrite = document.getElementById('ao3-btn-overwrite-preset');
   assert(btnOverwrite, 'Overwrite button must be rendered when a preset is active');
   console.log('  ✓ 3.5 Overwrite button properly displayed for active preset');
 
   // Test 3.6: Multi-Page Prefetch & Sort
-  const btnMulti = document.getElementById('ao3-btn-multipage-sort');
-  assert(btnMulti, 'Multi-page sort button must exist in top bar');
+  const btnMulti = document.getElementById('ao3-btn-multipage-30');
+  assert(btnMulti, 'Multi-page sort button must exist in top box');
   btnMulti.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
   await new Promise(r => setTimeout(r, 300));
 
