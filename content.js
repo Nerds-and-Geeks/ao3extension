@@ -111,10 +111,11 @@
   }
 
   /**
-   * Detects total available pages from AO3 pagination links or heading text
+   * Detects total available pages and total works count from AO3 pagination links or heading text
    */
   function detectMaxAvailablePages() {
     var maxPage = 1;
+    var totalWorksCount = 0;
 
     // Check pagination links
     var pageLinks = document.querySelectorAll('ol.pagination li a, ul.pagination li a');
@@ -126,21 +127,30 @@
       }
     });
 
-    // Fallback: Check heading text like "1 - 20 of 1,245 Works"
-    if (maxPage === 1) {
-      var heading = document.querySelector('h2.heading, h3.heading, .heading');
-      if (heading && heading.textContent) {
-        var match = heading.textContent.match(/of\s+([\d,]+)\s+Works/i);
+    // Check headings for total works count (e.g. "1 - 20 of 638 Works")
+    var headings = document.querySelectorAll('h2.heading, h3.heading, .heading, header.module h2');
+    headings.forEach(function(h) {
+      if (h && h.textContent && !totalWorksCount) {
+        var match = h.textContent.match(/(?:of\s+)?([\d,]+)\s+Works/i);
         if (match && match[1]) {
-          var totalWorks = parseInt(match[1].replace(/,/g, ''), 10);
-          if (totalWorks > 0) {
-            maxPage = Math.ceil(totalWorks / 20);
+          var count = parseInt(match[1].replace(/,/g, ''), 10);
+          if (count > 0) {
+            totalWorksCount = count;
+            var calcPage = Math.ceil(count / 20);
+            if (calcPage > maxPage) maxPage = calcPage;
           }
         }
       }
+    });
+
+    if (!totalWorksCount && maxPage > 1) {
+      totalWorksCount = maxPage * 20;
     }
 
-    return Math.min(maxPage, 30);
+    return {
+      totalPages: Math.max(1, maxPage),
+      totalWorks: totalWorksCount
+    };
   }
 
   /**
@@ -312,13 +322,11 @@
   }
 
   /**
-   * Multi-Page Prefetching & Sorting (Up to 30 Pages / 600 Works):
+   * Multi-Page Prefetching & Sorting:
    * Batches fetching of up to N pages of AO3 search results, scores all works,
    * and renders custom sorted pagination controls.
    */
   function prefetchAndSortMultiPages(maxPagesToFetch) {
-    maxPagesToFetch = maxPagesToFetch || 30;
-
     var container = document.querySelector('ol.work.index, ul.work.index, ol.index.group');
     if (!container) return;
 
@@ -426,7 +434,9 @@
     var worksList = document.querySelector('ol.work.index, ul.work.index, ol.index.group');
     if (!worksList) return;
 
-    var detectedMax = detectMaxAvailablePages();
+    var pageInfo = detectMaxAvailablePages();
+    var detectedMax = pageInfo.totalPages;
+    var totalWorks = pageInfo.totalWorks;
 
     var topWidget = document.createElement('div');
     topWidget.id = 'ao3-companion-top-bar';
@@ -489,8 +499,10 @@
     html += '<option value="20">20 Pages (400 Stories)</option>';
     html += '<option value="25">25 Pages (500 Stories)</option>';
     html += '<option value="30">30 Pages (600 Stories)</option>';
-    if (detectedMax > 1 && detectedMax !== 5 && detectedMax !== 10 && detectedMax !== 15 && detectedMax !== 20 && detectedMax !== 25 && detectedMax !== 30) {
-      html += '<option value="' + detectedMax + '">Max Available (' + detectedMax + ' Pages / ' + (detectedMax * 20) + ' Stories)</option>';
+
+    if (detectedMax > 1) {
+      var labelStories = totalWorks ? (totalWorks + ' Stories') : (detectedMax * 20 + ' Stories');
+      html += '<option value="' + detectedMax + '">Max Available (' + detectedMax + ' Pages / ' + labelStories + ')</option>';
     }
     html += '</select>';
     html += '<button id="ao3-btn-fetch-sort" class="ao3-companion-btn ao3-companion-btn-accent" style="width:auto; margin-bottom:0; white-space:nowrap;">🚀 Fetch & Sort Matches</button>';
@@ -579,7 +591,7 @@
     if (btnFetchSort) {
       btnFetchSort.addEventListener('click', function() {
         var selectDepth = topWidget.querySelector('#ao3-sort-depth-select');
-        var targetDepth = selectDepth ? parseInt(selectDepth.value, 10) : 5;
+        var targetDepth = selectDepth ? parseInt(selectDepth.value, 10) : detectedMax;
 
         if (targetDepth <= 1) {
           sortWorksByPrecision();
