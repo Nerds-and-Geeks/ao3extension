@@ -308,7 +308,8 @@
 
   /**
    * Multi-Page Prefetching & Sorting:
-   * Batches fetching of up to N pages of AO3 search results, scores all works,
+   * Sequentially fetches up to N pages of AO3 search results with rate-limit throttling,
+   * handles HTTP 429 ("Retry Later") with automatic retry backoff, scores all works,
    * and renders custom sorted pagination controls inside top box.
    */
   function prefetchAndSortMultiPages(maxPagesToFetch) {
@@ -334,26 +335,20 @@
       allWorksMap.set(key, el);
     });
 
-    var batchSize = 5;
+    var delayMs = 150; // Polite delay between page requests to prevent AO3 429 "Retry later"
 
-    function processBatch(batchIndex) {
-      var batch = urlsToFetch.slice(batchIndex * batchSize, (batchIndex + 1) * batchSize);
-      if (batch.length === 0) {
+    function fetchNextPage(index) {
+      if (index >= urlsToFetch.length) {
         finishAndRender();
         return;
       }
 
-      var lastPageInBatch = batch[batch.length - 1].pageNum;
-      updateSortButtonsText('⏳ Prefetching page ' + lastPageInBatch + ' of ' + maxPagesToFetch + '...', '#ed6c02');
+      var item = urlsToFetch[index];
+      updateSortButtonsText('⏳ Prefetching page ' + item.pageNum + ' of ' + maxPagesToFetch + '...', '#ed6c02');
 
-      var batchPromises = batch.map(function(item) {
-        return fetch(item.url, { headers: { 'Accept': 'text/html' } })
-          .then(function(res) {
-            if (!res.ok) return '';
-            return res.text();
-          })
-          .then(function(htmlText) {
-            if (!htmlText) return;
+      fetchWithRetry(item.url, 0)
+        .then(function(htmlText) {
+          if (htmlText) {
             var parser = new DOMParser();
             var doc = parser.parseFromString(htmlText, 'text/html');
             applyPrecisionScoring(doc);
@@ -366,15 +361,41 @@
                 allWorksMap.set(key, importedEl);
               }
             });
-          })
-          .catch(function(err) {
-            console.warn('Failed to prefetch page:', item.url, err);
-          });
-      });
+          }
 
-      Promise.all(batchPromises).then(function() {
-        processBatch(batchIndex + 1);
-      });
+          // Delay before next page request to honor AO3 server rate limits
+          setTimeout(function() {
+            fetchNextPage(index + 1);
+          }, delayMs);
+        })
+        .catch(function(err) {
+          console.warn('Failed to prefetch page:', item.url, err);
+          setTimeout(function() {
+            fetchNextPage(index + 1);
+          }, delayMs);
+        });
+    }
+
+    function fetchWithRetry(url, retryCount) {
+      var maxRetries = 2;
+      return fetch(url, { headers: { 'Accept': 'text/html' } })
+        .then(function(res) {
+          if (res.status === 429) { // AO3 "Retry later" / Too Many Requests
+            if (retryCount < maxRetries) {
+              updateSortButtonsText('⚠️ AO3 rate limit! Waiting 3s...', '#d32f2f');
+              return new Promise(function(resolve) {
+                setTimeout(function() {
+                  resolve(fetchWithRetry(url, retryCount + 1));
+                }, 3000);
+              });
+            } else {
+              console.warn('AO3 rate limit (429) persistent for URL:', url);
+              return '';
+            }
+          }
+          if (!res.ok) return '';
+          return res.text();
+        });
     }
 
     function finishAndRender() {
@@ -392,7 +413,7 @@
       updateSortButtonsText('✓ Prefetched & Ranked ' + combinedWorks.length + ' Stories!', '#2e7d32');
     }
 
-    processBatch(0);
+    fetchNextPage(0);
   }
 
   function updateSortButtonsText(text, bg) {

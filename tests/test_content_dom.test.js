@@ -161,7 +161,7 @@ async function testDomSuite() {
   // Test 3.6: Multi-Page Prefetch & Sort with Depth Dropdown & Embedded Pagination
   depthSelect.value = "5";
   btnFetchSort.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
-  await new Promise(r => setTimeout(r, 300));
+  await new Promise(r => setTimeout(r, 1000));
 
   const worksAfterMulti = document.querySelectorAll('ol.work.index > li.work');
   assert(worksAfterMulti.length >= 3, 'Multi-page prefetching must append prefetched works into DOM');
