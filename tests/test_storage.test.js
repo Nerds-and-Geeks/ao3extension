@@ -60,6 +60,12 @@ async function testStorageSuite() {
   assert.strictEqual(state3.presets.length, 0);
   assert.strictEqual(state3.activePresetId, null);
   console.log('  ✓ 1.5 deletePreset removes preset and clears active state');
+
+  // Test 1.6: URL Parsing - tag_id query parameter
+  const filterTagUrl = 'https://archiveofourown.org/works?commit=Sort+and+Filter&tag_id=Superman+%28Movie+2025%29&page=2';
+  const c3 = storage.parseAo3SearchUrl(filterTagUrl);
+  assert(c3.fandoms.includes('Superman (Movie 2025)'), 'tag_id parameter must be parsed into fandoms list');
+  console.log('  ✓ 1.6 parseAo3SearchUrl handles tag_id query parameter');
 }
 
 module.exports = testStorageSuite;
