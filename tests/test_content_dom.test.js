@@ -22,14 +22,14 @@ async function testDomSuite() {
                 by <a href="/users/author1">Author One</a>
               </h4>
               <h5 class="fandoms heading">
-                <a href="/tags/Superman%20(Movie%202025)/works">Superman (Movie 2025)</a>
+                <a href="/tags/Fandom%20A/works">Fandom A</a>
               </h5>
             </div>
             <ul class="tags commas">
-              <li class="relationships"><a href="/tags/Clark%20Kent*s*Lois%20Lane">Clark Kent/Lois Lane</a></li>
-              <li class="relationships"><a href="/tags/Bruce%20Wayne*s*Diana%20Prince">Bruce Wayne/Diana Prince</a></li>
-              <li class="relationships"><a href="/tags/Lex%20Luthor*s*Lois%20Lane">Lex Luthor/Lois Lane</a></li>
-              <li class="relationships"><a href="/tags/Jimmy%20Olsen*s*Lucy%20Lane">Jimmy Olsen/Lucy Lane</a></li>
+              <li class="relationships"><a href="/tags/Character%20A*s*Character%20B">Character A/Character B</a></li>
+              <li class="relationships"><a href="/tags/Character%20C*s*Character%20D">Character C/Character D</a></li>
+              <li class="relationships"><a href="/tags/Character%20E*s*Character%20B">Character E/Character B</a></li>
+              <li class="relationships"><a href="/tags/Character%20F*s*Character%20G">Character F/Character G</a></li>
             </ul>
           </li>
 
@@ -41,11 +41,11 @@ async function testDomSuite() {
                 by <a href="/users/author2">Author Two</a>
               </h4>
               <h5 class="fandoms heading">
-                <a href="/tags/Superman%20(Movie%202025)/works">Superman (Movie 2025)</a>
+                <a href="/tags/Fandom%20A/works">Fandom A</a>
               </h5>
             </div>
             <ul class="tags commas">
-              <li class="relationships"><a href="/tags/Clark%20Kent*s*Lois%20Lane">Clark Kent/Lois Lane</a></li>
+              <li class="relationships"><a href="/tags/Character%20A*s*Character%20B">Character A/Character B</a></li>
             </ul>
           </li>
         </ol>
@@ -55,7 +55,7 @@ async function testDomSuite() {
   `;
 
   const dom = new JSDOM(html, {
-    url: 'https://archiveofourown.org/works/search?work_search%5Bfandom_names%5D=Superman+%28Movie+2025%29&work_search%5Brelationship_names%5D=Clark+Kent%2FLois+Lane',
+    url: 'https://archiveofourown.org/works/search?work_search%5Bfandom_names%5D=Fandom+A&work_search%5Brelationship_names%5D=Character+A%2FCharacter+B',
     runScripts: 'dangerously',
     resources: 'usable'
   });
@@ -76,10 +76,10 @@ async function testDomSuite() {
       <li class="work id_103" id="work_103">
         <div class="header module">
           <h4 class="heading"><a href="/works/103">Fetched Page Story</a></h4>
-          <h5 class="fandoms heading"><a href="/tags/Superman%20(Movie%202025)/works">Superman (Movie 2025)</a></h5>
+          <h5 class="fandoms heading"><a href="/tags/Fandom%20A/works">Fandom A</a></h5>
         </div>
         <ul class="tags commas">
-          <li class="relationships"><a href="/tags/Clark%20Kent*s*Lois%20Lane">Clark Kent/Lois Lane</a></li>
+          <li class="relationships"><a href="/tags/Character%20A*s*Character%20B">Character A/Character B</a></li>
         </ul>
       </li>
     </ol></body></html>
@@ -143,14 +143,14 @@ async function testDomSuite() {
   // Test 3.4: Save Preset via Top Box Button (Requirement 1)
   const inputName = document.getElementById('ao3-preset-name-input');
   const btnSave = document.getElementById('ao3-btn-save-new');
-  inputName.value = 'Superman Canon Divergence';
+  inputName.value = 'Fandom A Preset';
 
   btnSave.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
   await new Promise(r => setTimeout(r, 100));
 
   const state = await window.loadPresets();
   assert.strictEqual(state.presets.length, 1);
-  assert.strictEqual(state.presets[0].name, 'Superman Canon Divergence');
+  assert.strictEqual(state.presets[0].name, 'Fandom A Preset');
   console.log('  ✓ 3.4 Saving preset via top box UI succeeds');
 
   // Test 3.5: Overwrite Preset via Top Box Button (Requirement 2)

@@ -470,7 +470,7 @@
     html += '<div style="flex:1; min-width:240px;">';
     html += '<label for="ao3-preset-name-input" style="font-weight:600; font-size:0.85em; display:block; margin-bottom:4px; color:#444;">Save Current Search as Preset:</label>';
     html += '<div style="display:flex; gap:6px;">';
-    html += '<input type="text" id="ao3-preset-name-input" class="ao3-companion-input" placeholder="e.g. Clark/Lois Canon Divergence" style="margin-bottom:0;" />';
+    html += '<input type="text" id="ao3-preset-name-input" class="ao3-companion-input" placeholder="e.g. Character A/Character B Canon Divergence" style="margin-bottom:0;" />';
     html += '<button id="ao3-btn-save-new" class="ao3-companion-btn" style="width:auto; white-space:nowrap; margin-bottom:0;">⭐ Save Preset</button>';
     html += '</div>';
     html += '</div>';

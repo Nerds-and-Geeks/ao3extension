@@ -6,22 +6,22 @@ async function testScorerSuite() {
 
   // Test 2.1: Relationship Tag Classification (/ = 5% deduction, & = 2% deduction)
   const presetCriteria = {
-    relationships: ['Clark Kent/Lois Lane'],
-    fandoms: ['Superman (Movie 2025)']
+    relationships: ['Character A/Character B'],
+    fandoms: ['Fandom A']
   };
 
   const exactWork = {
-    fandoms: ['Superman (Movie 2025)'],
-    relationships: ['Clark Kent/Lois Lane']
+    fandoms: ['Fandom A'],
+    relationships: ['Character A/Character B']
   };
 
   const workWithExtraRomanceAndFriendship = {
-    fandoms: ['Superman (Movie 2025)'],
+    fandoms: ['Fandom A'],
     relationships: [
-      'Clark Kent/Lois Lane',
-      'Bruce Wayne/Diana Prince', // 1 extra romance (/) -> -5%
-      'Clark Kent & Bruce Wayne', // 1 extra friendship (&) -> -2%
-      'Lois Lane & Jimmy Olsen'   // 1 extra friendship (&) -> -2%
+      'Character A/Character B',
+      'Character C/Character D', // 1 extra romance (/) -> -5%
+      'Character A & Character C', // 1 extra friendship (&) -> -2%
+      'Character B & Character D'   // 1 extra friendship (&) -> -2%
     ]
   };
 
@@ -39,8 +39,8 @@ async function testScorerSuite() {
 
   // Test 2.2: Unrelated / Missing Work
   const missingWork = {
-    fandoms: ['Batman (Movies)'],
-    relationships: ['Bruce Wayne/Diana Prince']
+    fandoms: ['Fandom B'],
+    relationships: ['Character C/Character D']
   };
   const scoreMissing = Scorer.calculatePrecisionScore(missingWork, presetCriteria);
   assert.strictEqual(scoreMissing.scorePercent, 0);
@@ -49,8 +49,8 @@ async function testScorerSuite() {
 
   // Test 2.3: Multi-Fandom Work Penalty (User scenario: >1 fandom dings the score by 2% per extra fandom tag)
   const multiFandomWork = {
-    fandoms: ['Superman - All Media Types', 'Superman (Movie 2025)', 'Superman (Comics)'],
-    relationships: ['Clark Kent/Lois Lane']
+    fandoms: ['Fandom A - All Media Types', 'Fandom A', 'Fandom A (Comics)'],
+    relationships: ['Character A/Character B']
   };
   const scoreMultiFandom = Scorer.calculatePrecisionScore(multiFandomWork, presetCriteria);
   assert.strictEqual(scoreMultiFandom.categoryScores.fandoms.precision, 0.96, 'Fandom precision for 2 extra fandoms must be 1.0 - 0.04 = 0.96 (4% penalty)');
@@ -59,10 +59,10 @@ async function testScorerSuite() {
 
   // Test 2.4: Additional Tags Excluded (User directive: additional tags should not count)
   const workWithLotsOfAdditionalTags = {
-    fandoms: ['Superman (Movie 2025)'],
-    relationships: ['Clark Kent/Lois Lane'],
+    fandoms: ['Fandom A'],
+    relationships: ['Character A/Character B'],
     freeformTags: ['Fluff', 'Angst', 'Alternate Universe', 'Slow Burn', 'Happy Ending', 'Coffee Shop AU', 'Domestic Bliss'],
-    characters: ['Clark Kent', 'Lois Lane', 'Jimmy Olsen', 'Perry White', 'Lex Luthor']
+    characters: ['Character A', 'Character B', 'Character C', 'Character D', 'Character E']
   };
   const scoreAdditionalTags = Scorer.calculatePrecisionScore(workWithLotsOfAdditionalTags, presetCriteria);
   assert.strictEqual(scoreAdditionalTags.scorePercent, 100, 'Additional tags and character tags must NOT ding the match score');
@@ -89,11 +89,11 @@ async function testScorerSuite() {
 
   // Test 2.7: User Reported Scenario (2 extra friendship tags deduct 4%) & Rounding Protection
   const userReportedWork = {
-    fandoms: ['Superman (Movie 2025)'],
+    fandoms: ['Fandom A'],
     relationships: [
-      'Clark Kent/Lois Lane',
-      'Justice Gang Members & Clark Kent', // extra friendship -> -2%
-      'Joey Mason & Rex Mason'            // extra friendship -> -2%
+      'Character A/Character B',
+      'Team Members & Character A', // extra friendship -> -2%
+      'Character C & Character D'    // extra friendship -> -2%
     ]
   };
   const scoreUserWork = Scorer.calculatePrecisionScore(userReportedWork, presetCriteria);
@@ -106,47 +106,47 @@ async function testScorerSuite() {
   assert.strictEqual(tinyPenaltyScore.scorePercent, 99, 'Non-perfect match with tiny penalty must cap at 99%');
   console.log(`  ✓ 2.7 Work with 2 extra friendship tags accurately dings 4% (98%) and score capping protects 100% badge`);
 
-  // Test 2.8: Same Character Pair Edge Case (Clark Kent & Lois Lane does NOT ding when Clark Kent/Lois Lane is requested)
+  // Test 2.8: Same Character Pair Edge Case (Character A & Character B does NOT ding when Character A/Character B is requested)
   const workWithSamePairFriendship = {
-    fandoms: ['Superman (Movie 2025)'],
+    fandoms: ['Fandom A'],
     relationships: [
-      'Clark Kent/Lois Lane',
-      'Clark Kent & Lois Lane' // Same character pair as requested Clark Kent/Lois Lane -> 0 penalty!
+      'Character A/Character B',
+      'Character A & Character B' // Same character pair as requested Character A/Character B -> 0 penalty!
     ]
   };
   const scoreSamePair = Scorer.calculatePrecisionScore(workWithSamePairFriendship, presetCriteria);
-  assert.strictEqual(scoreSamePair.scorePercent, 100, 'Clark Kent & Lois Lane must NOT ding score when Clark Kent/Lois Lane is requested');
+  assert.strictEqual(scoreSamePair.scorePercent, 100, 'Character A & Character B must NOT ding score when Character A/Character B is requested');
   assert.strictEqual(scoreSamePair.label, '🎯 100% Exact Match');
 
   const workWithSamePairAndUnrelatedFriendship = {
-    fandoms: ['Superman (Movie 2025)'],
+    fandoms: ['Fandom A'],
     relationships: [
-      'Clark Kent/Lois Lane',
-      'Clark Kent & Lois Lane',  // Same pair -> 0% penalty
-      'Joey Mason & Rex Mason'   // Different pair -> 2% penalty
+      'Character A/Character B',
+      'Character A & Character B',  // Same pair -> 0% penalty
+      'Character C & Character D'   // Different pair -> 2% penalty
     ]
   };
   const scoreSamePairAndUnrelated = Scorer.calculatePrecisionScore(workWithSamePairAndUnrelatedFriendship, presetCriteria);
   assert.strictEqual(scoreSamePairAndUnrelated.categoryScores.relationships.precision, 0.98, 'Relationship precision must be 98% (1 unrelated friendship tag)');
   assert.strictEqual(scoreSamePairAndUnrelated.scorePercent, 99, 'Same pair friendship does not ding, 1 unrelated friendship tag dings 2% (relationship 98% -> overall 99%)');
-  console.log('  ✓ 2.8 Same-character pair friendship tag (Clark Kent & Lois Lane) does NOT ding when Clark Kent/Lois Lane is requested');
+  console.log('  ✓ 2.8 Same-character pair friendship tag (Character A & Character B) does NOT ding when Character A/Character B is requested');
 
-  // Test 2.9: Reversed Character Name Order Matching (Lois Lane/Clark Kent matches Clark Kent/Lois Lane)
+  // Test 2.9: Reversed Character Name Order Matching (Character B/Character A matches Character A/Character B)
   const workWithReversedNames = {
-    fandoms: ['Superman (Movie 2025)'],
-    relationships: ['Lois Lane/Clark Kent'] // Reversed name order
+    fandoms: ['Fandom A'],
+    relationships: ['Character B/Character A'] // Reversed name order
   };
   const scoreReversed = Scorer.calculatePrecisionScore(workWithReversedNames, presetCriteria);
-  assert.strictEqual(scoreReversed.scorePercent, 100, 'Reversed character name order (Lois Lane/Clark Kent) must match 100%');
+  assert.strictEqual(scoreReversed.scorePercent, 100, 'Reversed character name order (Character B/Character A) must match 100%');
   assert.strictEqual(scoreReversed.label, '🎯 100% Exact Match');
 
   const workWithReversedFriendship = {
-    fandoms: ['Superman (Movie 2025)'],
-    relationships: ['Lois Lane & Clark Kent'] // Reversed friendship tag
+    fandoms: ['Fandom A'],
+    relationships: ['Character B & Character A'] // Reversed friendship tag
   };
   const scoreReversedFriendship = Scorer.calculatePrecisionScore(workWithReversedFriendship, presetCriteria);
-  assert.strictEqual(scoreReversedFriendship.scorePercent, 100, 'Reversed friendship tag (Lois Lane & Clark Kent) must match 100%');
-  console.log('  ✓ 2.9 Reversed character name order (Lois Lane/Clark Kent and Lois Lane & Clark Kent) matches 100%');
+  assert.strictEqual(scoreReversedFriendship.scorePercent, 100, 'Reversed friendship tag (Character B & Character A) must match 100%');
+  console.log('  ✓ 2.9 Reversed character name order (Character B/Character A and Character B & Character A) matches 100%');
 }
 
 module.exports = testScorerSuite;
